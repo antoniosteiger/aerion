@@ -31,7 +31,7 @@ func NewSingleInstanceLock() SingleInstanceLock {
 }
 
 // TryLock attempts to acquire the single-instance lock.
-// activateMsg is the command to send to an existing instance (e.g. "show" or "mailto:...").
+// activateMsg is the command to send to an existing instance (e.g. "show", "mailto:..." or "compose:{...}").
 func (l *darwinSingleInstanceLock) TryLock(activateMsg string) (bool, error) {
 	log := logging.WithComponent("singleinstance")
 
@@ -120,15 +120,16 @@ func (l *darwinSingleInstanceLock) handleConnection(conn net.Conn) {
 
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	scanner := bufio.NewScanner(conn)
-	// Limit scanner buffer to 2KB — no legitimate command exceeds this
-	scanner.Buffer(make([]byte, 2048), 2048)
+	// Limit scanner buffer to 64KB — enough for a compose: command carrying a
+	// mailto URL plus a list of attachment paths
+	scanner.Buffer(make([]byte, 64*1024), 64*1024)
 	if !scanner.Scan() {
 		return
 	}
 
 	cmd := scanner.Text()
-	// Command allowlist: only accept "show" or "mailto:..." — reject everything else
-	if cmd != "show" && !strings.HasPrefix(cmd, "mailto:") {
+	// Command allowlist: only accept "show", "mailto:..." or "compose:..." — reject everything else
+	if cmd != "show" && !strings.HasPrefix(cmd, "mailto:") && !strings.HasPrefix(cmd, "compose:") {
 		log.Warn().Str("cmd", cmd).Msg("Rejected unknown command from second instance")
 		return
 	}

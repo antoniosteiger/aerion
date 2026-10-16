@@ -51,6 +51,10 @@ type MailtoData struct {
 	Bcc     []string `json:"bcc"`
 	Subject string   `json:"subject"`
 	Body    string   `json:"body"`
+
+	// Attachments are absolute paths of local files to attach. Not part of the
+	// mailto: URL; set from the --attach command line flag.
+	Attachments []string `json:"attachments"`
 }
 
 // maxMailtoURLLength is the maximum allowed length for a mailto URL (2KB)
@@ -302,8 +306,8 @@ type App struct {
 	// Google Contacts API client (for OAuth accounts)
 	googleContactsClient *contact.GoogleContactsClient
 
-	// Pending mailto: URL data (from command line)
-	PendingMailto *MailtoData
+	// Pending compose request (mailto: URL and/or --attach files from command line)
+	PendingCompose *ComposeRequest
 
 	// Full-text search indexer
 	ftsIndexer *message.FTSIndexer
@@ -325,6 +329,9 @@ type App struct {
 	// Draft IMAP sync goroutine tracking — cancel in-flight syncDraftToIMAP
 	draftSyncContexts map[string]context.CancelFunc // keyed by draft ID
 	draftSyncDone     map[string]chan struct{}       // closed when goroutine exits
+
+	// Closed to stop the tray's unread-count poll
+	trayDone chan struct{}
 
 	// Sleep/wake detection for auto-sync on wake
 	sleepWakeMonitor platform.SleepWakeMonitor
@@ -518,8 +525,8 @@ func (a *App) Startup(ctx context.Context) {
 	// that could delay the rest of Startup.
 	if a.SingleInstanceLock != nil {
 		a.SingleInstanceLock.SetOnShow(func(data string) {
-			if strings.HasPrefix(data, "mailto:") {
-				a.handleExternalMailto(data)
+			if req, ok := parseComposeCommand(data); ok {
+				a.handleExternalCompose(*req)
 				return
 			}
 			a.ShowWindow()
@@ -749,6 +756,9 @@ func (a *App) Startup(ctx context.Context) {
 
 	// Initialize and start background email sync (polling + IDLE)
 	a.initBackgroundSync(ctx)
+
+	// Tray icon with unread indicator (Linux)
+	a.startTray()
 
 	// Sync any pending drafts from previous sessions
 	go a.syncAllPendingDrafts()
@@ -1054,6 +1064,10 @@ func (a *App) Shutdown(ctx context.Context) {
 		a.imapPool.CloseAll()
 		log.Info().Msg("IMAP connections closed")
 	}
+
+	// Remove the tray icon. Last D-Bus user: it closes the shared session bus.
+	// Before the DB close, since its poll reads unread counts.
+	a.stopTray()
 
 	if a.db != nil {
 		a.db.Close()

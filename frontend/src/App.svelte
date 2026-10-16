@@ -9,7 +9,6 @@
   import ConversationViewer from './lib/components/viewer/ConversationViewer.svelte'
   import Composer from './lib/components/composer/Composer.svelte'
   import ToastContainer from './lib/components/ui/toast/ToastContainer.svelte'
-  import SpellSuggestionMenu from './lib/spellcheck/SpellSuggestionMenu.svelte'
   import TermsDialog from './lib/components/TermsDialog.svelte'
   import OAuthMissingDialog from './lib/components/OAuthMissingDialog.svelte'
   import WhatsNewDialog from './lib/components/WhatsNewDialog.svelte'
@@ -23,7 +22,7 @@
   import * as AlertDialog from '$lib/components/ui/alert-dialog'
   import { accountStore } from '$lib/stores/accounts.svelte'
   import { addToast } from '$lib/stores/toast'
-  import { loadSettings, getThemeMode, getShowTitleBar, getNativeTitleBar, getComposerMode, getMailtoMode } from '$lib/stores/settings.svelte'
+  import { loadSettings, getThemeMode, getShowTitleBar, getNativeTitleBar, getComposerMode } from '$lib/stores/settings.svelte'
   import { loadImageAllowlist } from '$lib/stores/imageAllowlist.svelte'
   import { initTheme, applyThemeFromMode, handleSystemThemeEvent, handleMediaQueryChange } from '$lib/stores/theme.svelte'
   import { loadUIState, saveUIState, paneConstraints, getActiveExtension, setActiveExtension } from '$lib/stores/uiState.svelte'
@@ -35,6 +34,8 @@
     focusPreviousPane,
     focusNextPane,
     isPaneFlashing,
+    isPaneFramed,
+    setPaneFrameSuppressed,
     isInputElement,
     setComposerOpen,
     getPaneNav
@@ -43,7 +44,7 @@
   import { dispatchExtensionShortcut } from '$lib/stores/extensionShortcuts.svelte'
   import { initLayout, getLayoutMode, getResponsiveView, showViewer, hideViewer, showSidebar, hideSidebar, isResponsive } from '$lib/stores/layout.svelte'
   // @ts-ignore - wailsjs path
-  import { PrepareReply, GetPendingMailto, GetDraft, MarkAsRead, MarkAsUnread, Star, Unstar, Archive, MarkAsSpam, MarkAsNotSpam, Undo, GetTermsAccepted, SetTermsAccepted, RefreshWindowConstraints, AcceptCertificate, GetStartHiddenActive, CloseWindow, QuitApp, OpenComposerWindow, GetSystemTheme, NotifyStartupComplete, GetOAuthBuildStatus, GetOAuthWarningDisabled, SetOAuthWarningDisabled, GetLastSeenVersion, SetLastSeenVersion, GetAppInfo } from '../wailsjs/go/app/App.js'
+  import { PrepareReply, OpenPendingCompose, ReadFileAsAttachment, GetDraft, MarkAsRead, MarkAsUnread, Star, Unstar, Archive, MarkAsSpam, MarkAsNotSpam, Undo, GetTermsAccepted, SetTermsAccepted, RefreshWindowConstraints, AcceptCertificate, GetStartHiddenActive, QuitApp, OpenComposerWindow, GetSystemTheme, NotifyStartupComplete, GetOAuthBuildStatus, GetOAuthWarningDisabled, SetOAuthWarningDisabled, GetLastSeenVersion, SetLastSeenVersion, GetAppInfo } from '../wailsjs/go/app/App.js'
   // @ts-ignore - wailsjs path
   import { smtp, folder, certificate } from '../wailsjs/go/models'
   // @ts-ignore - wailsjs runtime
@@ -131,6 +132,9 @@
   // shortcuts scroll the viewer, then restore the prior pane on exit.
   let focusedPaneBeforeFocusMode: FocusablePane | null = null
   $effect(() => {
+    setPaneFrameSuppressed(focusMode !== 'off')
+  })
+  $effect(() => {
     const mode = focusMode
     if (mode !== 'off' && focusedPaneBeforeFocusMode === null) {
       focusedPaneBeforeFocusMode = untrack(() => getFocusedPane())
@@ -167,11 +171,6 @@
   // Flatpak filesystem permission dialog state
   let showFlatpakFsDialog = $state(false)
   let flatpakFsDialogContext = $state<'open' | 'saveAll'>('open')
-
-  // Handle window close button (title bar X) — hides if background mode, quits if not
-  function handleClose() {
-    CloseWindow()
-  }
 
   // Handle forced quit (Ctrl+Q) — always quits regardless of background mode
   function handleQuit() {
@@ -524,16 +523,14 @@
     // Initialize responsive layout breakpoint listeners
     initLayout()
 
-    // Check for pending mailto: URL from command line
+    // Open the composer requested on the command line (mailto: / --attach), if
+    // any. The backend routes it like a second-instance request.
     try {
-      const mailtoData = await GetPendingMailto()
-      if (mailtoData && (mailtoData.to?.length > 0 || mailtoData.subject || mailtoData.body)) {
-        // Wait a moment for accounts to load
-        await new Promise(resolve => setTimeout(resolve, 100))
-        handleMailtoData(mailtoData)
-      }
+      // Wait a moment for accounts to load
+      await new Promise(resolve => setTimeout(resolve, 100))
+      await OpenPendingCompose()
     } catch (err) {
-      console.error('Failed to check pending mailto:', err)
+      console.error('Failed to open pending compose:', err)
     }
   })
 
@@ -714,9 +711,12 @@
     bcc?: string[]
     subject?: string
     body?: string
+    attachments?: string[]
   }
 
-  function handleMailtoData(data: MailtoData, rawMailtoURL?: string) {
+  // Inline composer for a command-line compose request. The backend already
+  // chose inline over detached (mailto_mode) before emitting it.
+  async function handleMailtoData(data: MailtoData) {
     // Use selected account or first account (resolve 'unified' to real account)
     const accountId = resolveAccountId(selectedAccountId)
     if (!accountId) {
@@ -728,10 +728,24 @@
       return
     }
 
-    // Check if detached mode is preferred for mailto
-    if (getMailtoMode() === 'detached' && rawMailtoURL) {
-      OpenComposerWindow(accountId, 'new', '', '', rawMailtoURL)
-      return
+    // Files from --attach, read by the backend (paths are absolute)
+    const attachments: smtp.Attachment[] = []
+    for (const path of data.attachments || []) {
+      try {
+        const att = await ReadFileAsAttachment(path)
+        attachments.push(new smtp.Attachment({
+          filename: att.filename,
+          content_type: att.contentType,
+          content_base64: att.data,
+          inline: false,
+        }))
+      } catch (err) {
+        console.error('Failed to read attachment:', path, err)
+        addToast({
+          type: 'error',
+          message: $_('composer.failedToAttachFiles'),
+        })
+      }
     }
 
     composerAccountId = accountId
@@ -744,7 +758,7 @@
       subject: data.subject || '',
       text_body: data.body || '',
       html_body: '',
-      attachments: [],
+      attachments,
       request_read_receipt: false,
     })
     showComposer = true
@@ -1399,6 +1413,14 @@
       return
     }
 
+    // C — new mail composer (single-key alias of Ctrl+N, mail-domain only)
+    if (KEY.COMPOSE(e)) {
+      if (!isMailActive()) return
+      e.preventDefault()
+      handleCompose()
+      return
+    }
+
     // Single-key shortcuts
     switch (e.key) {
       case 's':
@@ -1565,7 +1587,7 @@
 <div class="flex flex-col h-full w-full overflow-hidden bg-background">
   <!-- Custom Title Bar -->
   {#if getShowTitleBar() && !getNativeTitleBar()}
-    <TitleBar onClose={handleClose} />
+    <TitleBar />
   {/if}
 
   <!-- Main Content -->
@@ -1588,7 +1610,7 @@
     <div style:display={getActiveExtension() === 'mail' ? 'contents' : 'none'}>
     <!-- Sidebar (Folder List) -->
     <aside
-      class="{getLayoutMode() === 'narrow' ? `responsive-sidebar-overlay w-72 border-r border-border bg-background ${getResponsiveView() === 'sidebar' ? 'responsive-sidebar-visible' : ''}` : 'flex-shrink-0 border-r border-border bg-muted/30'}"
+      class="{getLayoutMode() === 'narrow' ? `responsive-sidebar-overlay w-72 border-r border-border bg-background ${getResponsiveView() === 'sidebar' ? 'responsive-sidebar-visible' : ''}` : 'flex-shrink-0 border-r border-border bg-muted/30'} {isPaneFramed('sidebar') ? 'pane-focused' : ''}"
       style="{getLayoutMode() === 'full' ? `width: ${sidebarWidth}px` : ''}"
       role="presentation"
       onclick={() => handlePaneClick('sidebar')}
@@ -1637,7 +1659,7 @@
     <!-- Message List -->
     <section
       bind:this={messageListContainerRef}
-      class="{isResponsive() ? 'flex-1 min-w-0 border-r border-border bg-background' : 'flex-shrink-0 border-r border-border bg-background'}"
+      class="{isResponsive() ? 'flex-1 min-w-0 border-r border-border bg-background' : 'flex-shrink-0 border-r border-border bg-background'} {isPaneFramed('messageList') ? 'pane-focused' : ''}"
       style="{getLayoutMode() === 'full' ? `width: ${listWidth}px` : ''}"
       role="presentation"
       data-pane="messageList"
@@ -1674,7 +1696,7 @@
 
     <!-- Conversation Viewer -->
     <main
-      class="{viewerIsOverlay ? `responsive-viewer-overlay bg-background ${viewerIsVisible ? 'responsive-viewer-visible' : ''}` : 'flex-1 min-w-0 bg-background'}"
+      class="{viewerIsOverlay ? `responsive-viewer-overlay bg-background ${viewerIsVisible ? 'responsive-viewer-visible' : ''}` : 'flex-1 min-w-0 bg-background'} {isPaneFramed('viewer') ? 'pane-focused' : ''}"
       role="presentation"
       data-pane="viewer"
       onclick={() => handlePaneClick('viewer')}
@@ -1711,9 +1733,6 @@
 
 <!-- Toast notifications -->
 <ToastContainer />
-
-<!-- Spellcheck right-click suggestion menu (composer) -->
-<SpellSuggestionMenu />
 
 <!-- Per-extension settings dialog dispatcher (Settings → Extensions → Edit) -->
 <ExtensionSettingsDialog />

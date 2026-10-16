@@ -30,10 +30,6 @@ export function AddPGPKeyServer(arg1) {
   return window['go']['app']['App']['AddPGPKeyServer'](arg1);
 }
 
-export function AddSpellcheckCustomWord(arg1) {
-  return window['go']['app']['App']['AddSpellcheckCustomWord'](arg1);
-}
-
 export function Archive(arg1) {
   return window['go']['app']['App']['Archive'](arg1);
 }
@@ -630,10 +626,6 @@ export function GetPGPSignPolicy(arg1) {
   return window['go']['app']['App']['GetPGPSignPolicy'](arg1);
 }
 
-export function GetPendingMailto() {
-  return window['go']['app']['App']['GetPendingMailto']();
-}
-
 export function GetReadReceiptResponsePolicy() {
   return window['go']['app']['App']['GetReadReceiptResponsePolicy']();
 }
@@ -684,10 +676,6 @@ export function GetSourceAddressbooks(arg1) {
 
 export function GetSpecialFolder(arg1, arg2) {
   return window['go']['app']['App']['GetSpecialFolder'](arg1, arg2);
-}
-
-export function GetSpellcheckCustomWords() {
-  return window['go']['app']['App']['GetSpellcheckCustomWords']();
 }
 
 export function GetSpellcheckEnabled() {
@@ -934,6 +922,10 @@ export function OpenFolder(arg1) {
   return window['go']['app']['App']['OpenFolder'](arg1);
 }
 
+export function OpenPendingCompose() {
+  return window['go']['app']['App']['OpenPendingCompose']();
+}
+
 export function OpenURL(arg1) {
   return window['go']['app']['App']['OpenURL'](arg1);
 }
@@ -1004,10 +996,6 @@ export function RemoveImageAllowlist(arg1) {
 
 export function RemovePGPKeyServer(arg1) {
   return window['go']['app']['App']['RemovePGPKeyServer'](arg1);
-}
-
-export function RemoveSpellcheckCustomWord(arg1) {
-  return window['go']['app']['App']['RemoveSpellcheckCustomWord'](arg1);
 }
 
 export function RemoveTrustedCertificate(arg1) {

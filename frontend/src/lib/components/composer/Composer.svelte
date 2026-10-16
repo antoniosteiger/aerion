@@ -2056,6 +2056,7 @@
         id="composer-subject"
         bind:value={subject}
         type="text"
+        spellcheck="true"
         placeholder={$_('composer.subject')}
         class="flex-1 bg-transparent text-sm focus:outline-none"
         onkeydown={(e) => {

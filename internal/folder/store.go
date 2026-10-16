@@ -322,6 +322,23 @@ func (s *Store) Upsert(f *Folder) error {
 	return s.Create(f)
 }
 
+// InboxUnreadTotal returns the summed cached unread count of all inboxes of
+// enabled accounts — the unified inbox badge, without the debug logging of
+// message.Store.GetUnifiedInboxUnreadCount (this one is polled).
+func (s *Store) InboxUnreadTotal() (int, error) {
+	var count int
+	err := s.db.QueryRow(`
+		SELECT COALESCE(SUM(f.unread_count), 0)
+		FROM folders f
+		INNER JOIN accounts a ON f.account_id = a.id AND a.enabled = 1
+		WHERE f.folder_type = 'inbox'
+	`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to sum inbox unread counts: %w", err)
+	}
+	return count, nil
+}
+
 // GetByType returns a folder by account ID and folder type
 func (s *Store) GetByType(accountID string, folderType Type) (*Folder, error) {
 	query := `

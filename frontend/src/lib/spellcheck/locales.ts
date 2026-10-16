@@ -1,8 +1,8 @@
-// Maps an app locale (svelte-i18n code, e.g. "en", "de", "zh-TW") to a hunspell
+// Maps an app locale (svelte-i18n code, e.g. "en", "de", "zh-TW") to a
 // dictionary key, or null when the language isn't spellcheckable. Only
-// Latin-script locales Aerion ships dictionaries for are mapped; the three
-// zh-* locales and vi return null (CJK has no Latin-style per-word spelling;
-// vi has no bundled dictionary yet).
+// Latin-script locales with a dictionary are mapped; the three zh-* locales and
+// vi return null (CJK has no Latin-style per-word spelling; vi has no
+// dictionary yet).
 const APP_TO_DICT: Record<string, string> = {
   en: 'en',
   cs: 'cs',
@@ -12,7 +12,8 @@ const APP_TO_DICT: Record<string, string> = {
   nb: 'nb',
 }
 
-// Dictionaries bundled as static assets under /spellcheck/<key>.{aff,dic}.
+// Dictionaries offered in settings. Each needs the matching Hunspell dictionary
+// installed system-wide (internal/settings/spellcheck.go has the Enchant tags).
 export const SPELLCHECK_DICTS = ['en', 'en-gb', 'cs', 'de', 'fr', 'it', 'nb', 'nl'] as const
 
 // Display-name overrides for dictionaries that don't map 1:1 to an app

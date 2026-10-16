@@ -7,9 +7,6 @@
   import { _ } from '$lib/i18n'
   import { supportedLocales } from '$lib/i18n'
   import { SPELLCHECK_DICTS, DICT_NAMES } from '$lib/spellcheck/locales'
-  import { getSpellcheckCustomWords } from '$lib/stores/settings.svelte'
-  import { removeCustomWord } from '$lib/spellcheck/settings'
-  import SpellWordList from '$lib/spellcheck/SpellWordList.svelte'
 
   interface Props {
     composerMode: string
@@ -41,15 +38,12 @@
     onSpellcheckLanguagesChange,
   }: Props = $props()
 
-  // Dictionaries Aerion ships, with their native display names.
+  // Dictionaries Aerion offers (provided by the system), with their
+  // native display names.
   const dictLanguages = SPELLCHECK_DICTS.map((code) => ({
     code,
     name: DICT_NAMES[code] ?? supportedLocales.find((l) => l.code === code)?.name ?? code,
   }))
-
-  // Added-words list — read straight from the store (persists immediately on
-  // add/remove, independent of the dialog's Save flow).
-  const addedWords = $derived(getSpellcheckCustomWords())
 
   const modeOptions = $derived([
     { value: 'inline', label: $_('settings.composerModeInline') },
@@ -239,15 +233,8 @@
         {/each}
       </div>
       <p class="text-xs text-muted-foreground">{$_('spellcheck.languagesHelp')}</p>
+      <p class="text-xs text-muted-foreground">{$_('spellcheck.systemHelp')}</p>
     </div>
-
-    <SpellWordList
-      title={$_('spellcheck.addedWords')}
-      words={addedWords}
-      emptyText={$_('spellcheck.noAddedWords')}
-      removeLabel={$_('spellcheck.removeWord')}
-      onRemove={removeCustomWord}
-    />
   </div>
 
   <!-- Divider -->

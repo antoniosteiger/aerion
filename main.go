@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hkdb/aerion/app"
@@ -33,6 +34,7 @@ var (
 	messageID   = flag.String("message-id", "", "Original message ID for reply/forward")
 	draftID     = flag.String("draft-id", "", "Draft ID to resume editing")
 	mailtoFlag  = flag.String("mailto", "", "Mailto URL to open in composer (detached mode)")
+	attachFlag  = flag.Bool("attach", false, "Attach the FILE arguments to a new message: aerion --attach [mailto:URL] [--] FILE...")
 	dbusNotify  = flag.Bool("dbus-notify", false, "Use direct D-Bus notifications instead of portal (Linux only)")
 	versionFlag = flag.Bool("version", false, "Show version and exit")
 )
@@ -57,31 +59,55 @@ func main() {
 		platform.AttachConsole()
 	}
 
-	// Check for mailto: URL in non-flag arguments
-	var mailtoData *app.MailtoData
-	var rawMailtoArg string
-	args := flag.Args()
-	for _, arg := range args {
-		if strings.HasPrefix(strings.ToLower(arg), "mailto:") {
-			mailtoData = app.ParseMailtoURL(arg)
-			rawMailtoArg = arg
-			break
-		}
-	}
+	composeReq := parseComposeArgs(flag.Args())
 
 	if *composeMode {
-		runComposerMode()
+		runComposerMode(composeReq)
 		return
 	}
-	runMainMode(mailtoData, rawMailtoArg)
+	runMainMode(composeReq)
+}
+
+// parseComposeArgs reads the non-flag arguments: the first mailto: URL, and with
+// --attach every other argument as a file to attach. Returns nil when the
+// command line asks for no composer. Exits on a file that can't be attached,
+// so a typo fails loudly instead of sending the mail without it.
+func parseComposeArgs(args []string) *app.ComposeRequest {
+	req := &app.ComposeRequest{}
+	for _, arg := range args {
+		if req.MailtoURL == "" && strings.HasPrefix(strings.ToLower(arg), "mailto:") {
+			req.MailtoURL = arg
+			continue
+		}
+		if !*attachFlag {
+			continue
+		}
+		// Absolute, since the running instance that opens the file has its own cwd
+		path, err := filepath.Abs(arg)
+		if err == nil {
+			var info os.FileInfo
+			if info, err = os.Stat(path); err == nil && !info.Mode().IsRegular() {
+				err = fmt.Errorf("not a regular file")
+			}
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "aerion: cannot attach %s: %v\n", arg, err)
+			os.Exit(1)
+		}
+		req.Attachments = append(req.Attachments, path)
+	}
+	if req.MailtoURL == "" && !*attachFlag {
+		return nil
+	}
+	return req
 }
 
 // runMainMode runs the main application window
-func runMainMode(mailtoData *app.MailtoData, rawMailtoArg string) {
-	// Determine activation message: pass raw mailto URL if present, otherwise just "show"
+func runMainMode(composeReq *app.ComposeRequest) {
+	// Determine activation message: the compose request if present, otherwise just "show"
 	activateMsg := "show"
-	if rawMailtoArg != "" {
-		activateMsg = rawMailtoArg
+	if composeReq != nil {
+		activateMsg = composeReq.Command()
 	}
 
 	// Single-instance detection: if another instance is running, activate it and exit
@@ -108,6 +134,9 @@ func runMainMode(mailtoData *app.MailtoData, rawMailtoArg string) {
 	windowStartState := options.Normal
 	if paths, err := platform.GetPaths(); err == nil {
 		nativeTitleBar = settings.ReadNativeTitleBar(paths.DatabasePath())
+		// System spellcheck (WebKitGTK + Enchant); on the main thread, before
+		// the first webview exists
+		platform.SetSpellcheck(settings.ReadSpellcheck(paths.DatabasePath()))
 		if geo, ok := appstate.ReadWindowGeometry(paths.DatabasePath()); ok {
 			if geo.Width >= 360 && geo.Width <= 10000 && geo.Height >= 400 && geo.Height <= 10000 {
 				windowWidth, windowHeight = geo.Width, geo.Height
@@ -122,10 +151,8 @@ func runMainMode(mailtoData *app.MailtoData, rawMailtoArg string) {
 	application := app.NewApp(DebugMode, *dbusNotify)
 	application.SingleInstanceLock = lock
 
-	// Store mailto data if provided (will be used after startup)
-	if mailtoData != nil {
-		application.PendingMailto = mailtoData
-	}
+	// Store the compose request if provided (opened once the frontend is ready)
+	application.PendingCompose = composeReq
 
 	// Run pre-Wails startup checks (paths, DB open, migrations, credential
 	// store). On failure, surface a native error dialog and exit before the
@@ -174,7 +201,7 @@ func runMainMode(mailtoData *app.MailtoData, rawMailtoArg string) {
 }
 
 // runComposerMode runs a detached composer window
-func runComposerMode() {
+func runComposerMode(composeReq *app.ComposeRequest) {
 	// Validate required flags
 	if *accountID == "" {
 		println("Error: --account is required for composer mode")
@@ -207,6 +234,9 @@ func runComposerMode() {
 		DraftID:    *draftID,
 		MailtoURL:  *mailtoFlag,
 	}
+	if composeReq != nil {
+		config.Attachments = composeReq.Attachments
+	}
 
 	// Create composer app
 	composerApp := app.NewComposerApp(config, DebugMode)
@@ -229,6 +259,7 @@ func runComposerMode() {
 	composerNativeTitleBar := false
 	if paths, err := platform.GetPaths(); err == nil {
 		composerNativeTitleBar = settings.ReadNativeTitleBar(paths.DatabasePath())
+		platform.SetSpellcheck(settings.ReadSpellcheck(paths.DatabasePath()))
 	}
 
 	// Create a custom asset handler that serves composer.html instead of index.html

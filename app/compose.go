@@ -555,19 +555,63 @@ func (a *App) SendMessage(accountID string, msg smtp.ComposeMessage) error {
 	return nil
 }
 
-// handleExternalMailto handles a mailto URL received from a second instance.
-// Routes to inline or detached composer based on the mailto_mode setting.
-func (a *App) handleExternalMailto(rawURL string) {
+// ComposeRequest asks for a new message from the command line, optionally
+// pre-filled from a mailto: URL and with local files attached
+// (aerion --attach [mailto:URL] FILE...).
+type ComposeRequest struct {
+	MailtoURL   string   `json:"mailtoUrl"`
+	Attachments []string `json:"attachments"` // absolute file paths
+}
+
+// composeCommandPrefix marks a ComposeRequest sent to the running instance.
+const composeCommandPrefix = "compose:"
+
+// Command encodes the request as a single-instance activation command. A
+// plain mailto: URL stays as-is so older running instances still understand it.
+func (r ComposeRequest) Command() string {
+	if len(r.Attachments) == 0 && r.MailtoURL != "" {
+		return r.MailtoURL
+	}
+	data, err := json.Marshal(r)
+	if err != nil {
+		return "show"
+	}
+	return composeCommandPrefix + string(data)
+}
+
+// parseComposeCommand decodes a command produced by ComposeRequest.Command.
+func parseComposeCommand(cmd string) (*ComposeRequest, bool) {
+	if strings.HasPrefix(strings.ToLower(cmd), "mailto:") {
+		return &ComposeRequest{MailtoURL: cmd}, true
+	}
+	if !strings.HasPrefix(cmd, composeCommandPrefix) {
+		return nil, false
+	}
+	var req ComposeRequest
+	if err := json.Unmarshal([]byte(strings.TrimPrefix(cmd, composeCommandPrefix)), &req); err != nil {
+		return nil, false
+	}
+	return &req, true
+}
+
+// handleExternalCompose opens the composer for a request from the command line
+// (second instance, or this instance's own launch arguments). Routes to inline
+// or detached composer based on the mailto_mode setting.
+func (a *App) handleExternalCompose(req ComposeRequest) {
 	log := logging.WithComponent("app")
 
-	mailtoData := ParseMailtoURL(rawURL)
-	if mailtoData == nil {
-		log.Warn().Str("url", rawURL).Msg("Invalid mailto URL from second instance")
-		return
+	mailtoData := &MailtoData{}
+	if req.MailtoURL != "" {
+		mailtoData = ParseMailtoURL(req.MailtoURL)
+		if mailtoData == nil {
+			log.Warn().Str("url", req.MailtoURL).Msg("Invalid mailto URL from command line")
+			return
+		}
 	}
+	mailtoData.Attachments = req.Attachments
 
 	mailtoMode, _ := a.settingsStore.GetMailtoMode()
-	log.Info().Str("mode", mailtoMode).Msg("Handling external mailto")
+	log.Info().Str("mode", mailtoMode).Int("attachments", len(req.Attachments)).Msg("Handling external compose")
 
 	if mailtoMode == "detached" {
 		// Pick first account for detached composer
@@ -576,7 +620,7 @@ func (a *App) handleExternalMailto(rawURL string) {
 			log.Warn().Msg("No accounts available for mailto")
 			return
 		}
-		if err := a.OpenComposerWindow(accounts[0].ID, "new", "", "", rawURL); err != nil {
+		if err := a.openComposerWindow(accounts[0].ID, "new", "", "", req.MailtoURL, req.Attachments); err != nil {
 			log.Warn().Err(err).Msg("Failed to open detached composer for mailto")
 		}
 		return
@@ -585,6 +629,16 @@ func (a *App) handleExternalMailto(rawURL string) {
 	// Inline mode: show window and emit event for frontend
 	a.ShowWindow()
 	wailsRuntime.EventsEmit(a.ctx, "mailto:external", mailtoData)
+}
+
+// OpenPendingCompose opens the composer requested by this instance's own
+// launch arguments, if any. Called by the frontend once it is ready.
+func (a *App) OpenPendingCompose() {
+	req := a.PendingCompose
+	a.PendingCompose = nil
+	if req != nil {
+		a.handleExternalCompose(*req)
+	}
 }
 
 // syncSentFolder syncs the Sent folder for an account after sending a message

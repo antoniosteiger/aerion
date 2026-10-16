@@ -33,8 +33,6 @@ export function AddMicrosoftSharedMailbox(arg1:string,arg2:string,arg3:string):P
 
 export function AddPGPKeyServer(arg1:string):Promise<void>;
 
-export function AddSpellcheckCustomWord(arg1:string):Promise<void>;
-
 export function Archive(arg1:Array<string>):Promise<void>;
 
 export function BroadcastThemeChange(arg1:string):Promise<void>;
@@ -333,8 +331,6 @@ export function GetPGPKeyServers():Promise<Array<pgp.KeyServer>>;
 
 export function GetPGPSignPolicy(arg1:string):Promise<string>;
 
-export function GetPendingMailto():Promise<app.MailtoData>;
-
 export function GetReadReceiptResponsePolicy():Promise<string>;
 
 export function GetRunBackground():Promise<boolean>;
@@ -360,8 +356,6 @@ export function GetShowViewerCircles():Promise<boolean>;
 export function GetSourceAddressbooks(arg1:string):Promise<Array<carddav.Addressbook>>;
 
 export function GetSpecialFolder(arg1:string,arg2:folder.Type):Promise<folder.Folder>;
-
-export function GetSpellcheckCustomWords():Promise<Array<string>>;
 
 export function GetSpellcheckEnabled():Promise<boolean>;
 
@@ -485,6 +479,8 @@ export function OpenFile(arg1:string):Promise<void>;
 
 export function OpenFolder(arg1:string):Promise<void>;
 
+export function OpenPendingCompose():Promise<void>;
+
 export function OpenURL(arg1:string):Promise<void>;
 
 export function PickAttachmentFiles():Promise<Array<app.ComposerAttachment>>;
@@ -520,8 +516,6 @@ export function RemoveAccount(arg1:string):Promise<void>;
 export function RemoveImageAllowlist(arg1:number):Promise<void>;
 
 export function RemovePGPKeyServer(arg1:number):Promise<void>;
-
-export function RemoveSpellcheckCustomWord(arg1:string):Promise<void>;
 
 export function RemoveTrustedCertificate(arg1:string):Promise<void>;
 

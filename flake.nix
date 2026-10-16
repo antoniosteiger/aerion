@@ -15,21 +15,22 @@
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
       version = (nixpkgs.lib.importJSON ./frontend/package.json).version;
+
+      packageArgs = {
+        inherit version;
+        src = self;
+        # Own Azure app registration (public client, not a secret) for Outlook.com OAuth.
+        microsoftClientId = "1f78976f-fb3e-442d-80df-762952279fca";
+      };
     in
     {
       packages = forAllSystems (pkgs: {
-        aerion = pkgs.callPackage ./nix/package.nix {
-          inherit version;
-          src = self;
-        };
+        aerion = pkgs.callPackage ./nix/package.nix packageArgs;
         default = self.packages.${pkgs.stdenv.hostPlatform.system}.aerion;
       });
 
       overlays.default = final: _prev: {
-        aerion = final.callPackage ./nix/package.nix {
-          inherit version;
-          src = self;
-        };
+        aerion = final.callPackage ./nix/package.nix packageArgs;
       };
 
       devShells = forAllSystems (pkgs: {
@@ -43,6 +44,8 @@
             wails
             gnumake
           ];
+          # Picked up by the Makefile (make dev / make build) like a .env entry.
+          MICROSOFT_CLIENT_ID = packageArgs.microsoftClientId;
           # WebKitGTK's DMA-BUF renderer misbehaves on some GPU/driver combos
           # when run from a dev shell; uncomment if `wails dev` shows a blank window.
           # WEBKIT_DISABLE_DMABUF_RENDERER = "1";

@@ -32,12 +32,13 @@ import (
 
 // ComposerConfig holds the configuration for a composer window.
 type ComposerConfig struct {
-	AccountID  string // Required: account to compose from
-	IPCAddress string // Required: address of main window's IPC server
-	Mode       string // "new", "reply", "reply-all", "forward"
-	MessageID  string // Original message ID (for reply/forward)
-	DraftID    string // Draft ID to resume editing
-	MailtoURL  string // External mailto: URL to pre-fill (detached mode)
+	AccountID   string   // Required: account to compose from
+	IPCAddress  string   // Required: address of main window's IPC server
+	Mode        string   // "new", "reply", "reply-all", "forward"
+	MessageID   string   // Original message ID (for reply/forward)
+	DraftID     string   // Draft ID to resume editing
+	MailtoURL   string   // External mailto: URL to pre-fill (detached mode)
+	Attachments []string // Files to attach to a new message (absolute paths)
 }
 
 // ComposeMode represents the compose mode data returned to the frontend.
@@ -632,6 +633,21 @@ func (c *ComposerApp) PrepareReply() (*smtp.ComposeMessage, error) {
 				msg.Subject = mailtoData.Subject
 				msg.TextBody = mailtoData.Body
 			}
+		}
+
+		// Attach files passed on the command line (--attach)
+		for _, path := range c.config.Attachments {
+			att, err := readFileAsAttachment(path)
+			if err != nil {
+				log := logging.WithComponent("composer")
+				log.Warn().Err(err).Str("path", path).Msg("Skipping attachment")
+				continue
+			}
+			msg.Attachments = append(msg.Attachments, smtp.Attachment{
+				Filename:      att.Filename,
+				ContentType:   att.ContentType,
+				ContentBase64: att.Data,
+			})
 		}
 
 		return msg, nil

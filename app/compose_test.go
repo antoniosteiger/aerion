@@ -79,3 +79,38 @@ func TestQuotedHTMLReferencesCID(t *testing.T) {
 		})
 	}
 }
+
+func TestComposeRequestCommandRoundTrip(t *testing.T) {
+	cases := []struct {
+		name    string
+		req     ComposeRequest
+		wantRaw bool // plain mailto: URL, understood by older instances
+	}{
+		{"mailto only stays raw", ComposeRequest{MailtoURL: "mailto:a@example.com?subject=hi"}, true},
+		{"attachments only", ComposeRequest{Attachments: []string{"/tmp/a b.pdf", "/tmp/new\nline.txt"}}, false},
+		{"mailto and attachments", ComposeRequest{MailtoURL: "mailto:a@example.com", Attachments: []string{"/tmp/x"}}, false},
+		{"empty (bare --attach)", ComposeRequest{}, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			cmd := c.req.Command()
+			if strings.ContainsRune(cmd, '\n') {
+				t.Fatalf("command must be a single line, got %q", cmd)
+			}
+			if got := strings.HasPrefix(cmd, "mailto:"); got != c.wantRaw {
+				t.Fatalf("raw mailto = %v, want %v (cmd %q)", got, c.wantRaw, cmd)
+			}
+			got, ok := parseComposeCommand(cmd)
+			if !ok {
+				t.Fatalf("parseComposeCommand(%q) failed", cmd)
+			}
+			if got.MailtoURL != c.req.MailtoURL || strings.Join(got.Attachments, "|") != strings.Join(c.req.Attachments, "|") {
+				t.Fatalf("round trip mismatch: got %+v, want %+v", *got, c.req)
+			}
+		})
+	}
+
+	if _, ok := parseComposeCommand("show"); ok {
+		t.Fatal(`"show" must not parse as a compose request`)
+	}
+}

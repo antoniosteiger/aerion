@@ -83,6 +83,22 @@ mark {
   animation: pane-focus-flash 0.3s ease-out;
 }
 
+/* Persistent frame on the keyboard-focused pane. Drawn as an overlay so child
+   backgrounds can't cover it. :where() keeps position at zero specificity, so
+   panes that are already positioned (responsive overlays) keep their value. */
+:where(.pane-focused) {
+  position: relative;
+}
+
+.pane-focused::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid hsl(var(--primary) / 0.7);
+  pointer-events: none;
+  z-index: 40;
+}
+
 /* Smooth slide-down for conversation viewer content */
 @keyframes conversation-slide-down {
   from {
@@ -280,13 +296,4 @@ mark {
 .responsive-scrim-visible {
   background: rgba(0, 0, 0, 0.4);
   pointer-events: auto;
-}
-
-/* Spellcheck: misspelled-word underline in the composer body (ProseMirror
-   inline decoration from src/lib/spellcheck). Global because it targets nodes
-   rendered inside the editor's contenteditable. */
-.spellcheck-error {
-  text-decoration: underline wavy #ef4444;
-  text-decoration-skip-ink: none;
-  text-underline-offset: 2px;
 }

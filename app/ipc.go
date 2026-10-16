@@ -193,6 +193,11 @@ func (a *App) handleComposerDraftDeleted(payload ipc.DraftDeletedPayload) {
 // This creates a separate process of the same executable with composer mode flags.
 // If mailtoURL is non-empty, the --mailto flag is appended for the composer to handle.
 func (a *App) OpenComposerWindow(accountID, mode, messageID, draftID, mailtoURL string) error {
+	return a.openComposerWindow(accountID, mode, messageID, draftID, mailtoURL, nil)
+}
+
+// openComposerWindow is OpenComposerWindow plus files to attach (absolute paths).
+func (a *App) openComposerWindow(accountID, mode, messageID, draftID, mailtoURL string, attachments []string) error {
 	log := logging.WithComponent("app.ipc")
 
 	if a.ipcServer == nil || a.ipcTokenMgr == nil {
@@ -224,6 +229,12 @@ func (a *App) OpenComposerWindow(accountID, mode, messageID, draftID, mailtoURL 
 	// Add mailto URL if provided
 	if mailtoURL != "" {
 		args = append(args, "--mailto", mailtoURL)
+	}
+
+	// Files to attach go last, after "--" so paths starting with "-" stay positional
+	if len(attachments) > 0 {
+		args = append(args, "--attach", "--")
+		args = append(args, attachments...)
 	}
 
 	log.Info().

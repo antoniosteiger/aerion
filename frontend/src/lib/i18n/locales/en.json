@@ -5,6 +5,7 @@
     "enableHelp": "Underline misspelled words while composing.",
     "languages": "Dictionaries",
     "languagesHelp": "A word is accepted if it's valid in any enabled language.",
+    "systemHelp": "Uses your system spellchecker: a language only works if its Hunspell dictionary is installed. Right-click a misspelled word for suggestions, or choose \"Learn Spelling\" to add it to your personal dictionary.",
     "addToDictionary": "Add to dictionary",
     "ignore": "Ignore",
     "noSuggestions": "No suggestions",

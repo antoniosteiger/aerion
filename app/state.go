@@ -27,7 +27,7 @@ func (a *App) SaveUIState(state *appstate.UIState) error {
 // the About dialog via GetAppInfo() and by the --version CLI flag in main.go.
 // (wails.json, frontend/package.json, and metainfo.xml each carry their own
 // version strings for their respective tooling.)
-const Version = "0.3.5"
+const Version = "0.3.5-fork.1"
 
 // AppInfo contains application metadata
 type AppInfo struct {
@@ -52,12 +52,4 @@ func (a *App) GetAppInfo() AppInfo {
 // IsFlatpak returns true if the application is running inside a Flatpak sandbox.
 func (a *App) IsFlatpak() bool {
 	return platform.IsFlatpak()
-}
-
-// GetPendingMailto returns and clears any pending mailto: URL data.
-// This is used when Aerion is launched with a mailto: URL argument.
-func (a *App) GetPendingMailto() *MailtoData {
-	data := a.PendingMailto
-	a.PendingMailto = nil // Clear after reading
-	return data
 }

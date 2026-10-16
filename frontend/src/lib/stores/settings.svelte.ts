@@ -2,7 +2,7 @@
 // Provides reactive state for application settings
 
 // @ts-ignore - wailsjs path
-import { GetMessageListDensity, GetMessageListSortOrder, GetThemeMode, GetShowTitleBar, GetRunBackground, GetStartHidden, GetAutostart, GetLanguage, GetComposerMode, GetMailtoMode, GetComposerFormat, GetNativeTitleBar, GetAlwaysLoadImages, GetDarkMailContent, GetDarkComposerBody, GetAccentBarUnread, GetAccentUnreadStyle, GetShowMessageListCircles, GetShowMessageListProfilePics, GetAlwaysShowMessageCheckbox, GetShowViewerCircles, GetSpellcheckEnabled, GetSpellcheckLanguages, GetSpellcheckCustomWords } from '../../../wailsjs/go/app/App'
+import { GetMessageListDensity, GetMessageListSortOrder, GetThemeMode, GetShowTitleBar, GetRunBackground, GetStartHidden, GetAutostart, GetLanguage, GetComposerMode, GetMailtoMode, GetComposerFormat, GetNativeTitleBar, GetAlwaysLoadImages, GetDarkMailContent, GetDarkComposerBody, GetAccentBarUnread, GetAccentUnreadStyle, GetShowMessageListCircles, GetShowMessageListProfilePics, GetAlwaysShowMessageCheckbox, GetShowViewerCircles, GetSpellcheckEnabled, GetSpellcheckLanguages } from '../../../wailsjs/go/app/App'
 import { setLocale as setI18nLocale } from '$lib/i18n'
 import { loadDateFnsLocale, getDateFnsLocale } from '$lib/i18n/dateFnsLocale'
 import type { Locale } from 'date-fns'
@@ -17,6 +17,7 @@ export type ThemeMode =
   | 'dark' | 'dark-gray' | 'dark-balanced' | 'adwaita-dark' | 'breeze-dark'
   | 'catppuccin-latte' | 'catppuccin-frappe' | 'catppuccin-macchiato' | 'catppuccin-mocha'
   | 'dracula' | 'github-light' | 'github-dark' | 'github-soft-dark' | 'tokyo-night'
+  | 'gruvbox-light' | 'gruvbox-dark'
   | 'nord-light' | 'nord-dark'
   | 'pop-light' | 'pop-dark'
   | 'yaru-light' | 'yaru-dark'
@@ -25,17 +26,16 @@ export type ThemeMode =
 // Module-level reactive state
 let messageListDensity = $state<MessageListDensity>('standard')
 let messageListSortOrder = $state<MessageListSortOrder>('newest')
-let themeMode = $state<ThemeMode>('system')
-let showTitleBar = $state<boolean>(true)
+let themeMode = $state<ThemeMode>('gruvbox-dark')
+let showTitleBar = $state<boolean>(false)
 let runBackground = $state<boolean>(false)
 let startHidden = $state<boolean>(false)
 let autostart = $state<boolean>(false)
 let spellcheckEnabled = $state<boolean>(true)
 let spellcheckLanguages = $state<string[]>([])
-let spellcheckCustomWords = $state<string[]>([])
 let language = $state<string>('')
-let composerMode = $state<ComposerMode>('inline')
-let mailtoMode = $state<ComposerMode>('inline')
+let composerMode = $state<ComposerMode>('detached')
+let mailtoMode = $state<ComposerMode>('detached')
 let composerFormat = $state<ComposerFormat>('rich')
 let nativeTitleBar = $state<boolean>(false)
 let alwaysLoadImages = $state<boolean>(false)
@@ -83,10 +83,6 @@ export function getSpellcheckEnabled(): boolean {
 
 export function getSpellcheckLanguages(): string[] {
   return spellcheckLanguages
-}
-
-export function getSpellcheckCustomWords(): string[] {
-  return spellcheckCustomWords
 }
 
 export function getLanguage(): string {
@@ -186,10 +182,6 @@ export function setSpellcheckLanguages(v: string[]) {
   spellcheckLanguages = v
 }
 
-export function setSpellcheckCustomWords(v: string[]) {
-  spellcheckCustomWords = v
-}
-
 export function setLanguage(lang: string) {
   language = lang
   if (lang) {
@@ -253,7 +245,7 @@ export function setShowViewerCircles(v: boolean) {
 // Load settings from backend (call on app startup)
 export async function loadSettings(): Promise<ThemeMode> {
   try {
-    const [density, sortOrder, theme, titleBar, runBg, startHid, autoSt, lang, compMode, mailMode, compFormat, nativeTB, alwaysImages, darkMail, darkComposer, accentBar, accentStyle, listCircles, listProfilePics, alwaysCheckbox, viewerCircles, scEnabled, scLangs, scWords] = await Promise.all([
+    const [density, sortOrder, theme, titleBar, runBg, startHid, autoSt, lang, compMode, mailMode, compFormat, nativeTB, alwaysImages, darkMail, darkComposer, accentBar, accentStyle, listCircles, listProfilePics, alwaysCheckbox, viewerCircles, scEnabled, scLangs] = await Promise.all([
       GetMessageListDensity(),
       GetMessageListSortOrder(),
       GetThemeMode(),
@@ -277,17 +269,16 @@ export async function loadSettings(): Promise<ThemeMode> {
       GetShowViewerCircles(),
       GetSpellcheckEnabled(),
       GetSpellcheckLanguages(),
-      GetSpellcheckCustomWords(),
     ])
     messageListDensity = (density as MessageListDensity) || 'standard'
     messageListSortOrder = (sortOrder as MessageListSortOrder) || 'newest'
-    themeMode = (theme as ThemeMode) || 'system'
-    showTitleBar = titleBar ?? true // Default to true
+    themeMode = (theme as ThemeMode) || 'gruvbox-dark'
+    showTitleBar = titleBar ?? false // Default to false (no in-app title bar)
     runBackground = runBg ?? false
     startHidden = startHid ?? false
     autostart = autoSt ?? false
-    composerMode = (compMode as ComposerMode) || 'inline'
-    mailtoMode = (mailMode as ComposerMode) || 'inline'
+    composerMode = (compMode as ComposerMode) || 'detached'
+    mailtoMode = (mailMode as ComposerMode) || 'detached'
     composerFormat = (compFormat as ComposerFormat) || 'rich'
     nativeTitleBar = nativeTB ?? false
     alwaysLoadImages = alwaysImages ?? false
@@ -301,7 +292,6 @@ export async function loadSettings(): Promise<ThemeMode> {
     showViewerCircles = viewerCircles ?? true
     spellcheckEnabled = scEnabled ?? true
     spellcheckLanguages = scLangs ?? []
-    spellcheckCustomWords = scWords ?? []
     // Apply saved language (if set, overrides system detection from initI18n)
     if (lang) {
       language = lang
