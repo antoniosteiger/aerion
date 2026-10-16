@@ -42,11 +42,11 @@ buildGoModule (finalAttrs: {
       ]);
   };
 
-  vendorHash = "sha256-2NxgmklHScpcF4aOLPPzuVZZ2Qhmx/7SrCGnJtJ/x54=";
+  vendorHash = "sha256-mL1itgKxD0wkigZiCVdjuP6QiFrhQgH5i/CeztVux1M=";
 
   npmDeps = fetchNpmDeps {
     src = "${finalAttrs.src}/frontend";
-    hash = "sha256-a4N34fzmFMZoafX1rXUyeSAm12uV7njfhRkq3KT8h+I=";
+    hash = "sha256-sQwplyDAbayYczwrrXMcxPIzE8IhB5vkApt7qLwAEQo=";
   };
   npmRoot = "frontend";
 

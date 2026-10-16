@@ -5,6 +5,7 @@
     "enableHelp": "Falsch geschriebene Wörter beim Schreiben unterstreichen.",
     "languages": "Wörterbücher",
     "languagesHelp": "Ein Wort wird akzeptiert, wenn es in einer der aktivierten Sprachen gültig ist.",
+    "systemHelp": "Verwendet die Rechtschreibprüfung des Systems: eine Sprache funktioniert nur, wenn ihr Hunspell-Wörterbuch installiert ist. Rechtsklick auf ein falsch geschriebenes Wort zeigt Vorschläge; mit „Learn Spelling“ kommt es ins persönliche Wörterbuch.",
     "addToDictionary": "Zum Wörterbuch hinzufügen",
     "ignore": "Ignorieren",
     "noSuggestions": "Keine Vorschläge",

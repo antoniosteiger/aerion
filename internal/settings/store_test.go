@@ -307,14 +307,14 @@ func TestSetGetBoolSettings(t *testing.T) {
 			set:    (*Store).SetShowTitleBar,
 			get:    (*Store).GetShowTitleBar,
 			value:  true,
-			defVal: true,
+			defVal: false,
 		},
 		{
 			name:   "ShowTitleBar_false",
 			set:    (*Store).SetShowTitleBar,
 			get:    (*Store).GetShowTitleBar,
 			value:  false,
-			defVal: true,
+			defVal: false,
 		},
 		{
 			name:   "TermsAccepted_true",

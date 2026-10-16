@@ -1,7 +1,7 @@
 <script lang="ts">
   // Plain-text compose surface backed by a ProseMirror editor (minimal schema:
-  // paragraphs only, no formatting) so the shared Spellcheck extension can
-  // underline misspellings — which a native <textarea> can't do. It re-exposes
+  // paragraphs only, no formatting), so it gets the same native spellcheck
+  // as the rich-text composer. It re-exposes
   // a two-way `value` prop ($bindable) so it drops in where the textarea's
   // `bind:value` was: the composer's send/draft/dirty logic is untouched.
   //
@@ -12,8 +12,6 @@
   import { Editor } from '@tiptap/core'
   import StarterKit from '@tiptap/starter-kit'
   import Placeholder from '@tiptap/extension-placeholder'
-  import { Spellcheck } from '$lib/spellcheck/plugin'
-  import { syncSpellcheckLanguages } from '$lib/spellcheck/settings'
 
   interface Props {
     value?: string
@@ -49,7 +47,6 @@
   }
 
   onMount(() => {
-    syncSpellcheckLanguages()
     editor = new Editor({
       element: element!,
       extensions: [
@@ -70,12 +67,11 @@
           hardBreak: false,
         }),
         Placeholder.configure({ placeholder }),
-        Spellcheck,
       ],
       editorProps: {
         attributes: {
           class: 'plaintext-editor focus:outline-none font-mono text-sm p-3 min-h-full whitespace-pre-wrap',
-          spellcheck: 'false',
+          spellcheck: 'true',
         },
       },
       content: '',

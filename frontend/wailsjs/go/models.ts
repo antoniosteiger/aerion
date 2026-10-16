@@ -509,26 +509,6 @@ export namespace app {
 	        this.hasContactScope = source["hasContactScope"];
 	    }
 	}
-	export class MailtoData {
-	    to: string[];
-	    cc: string[];
-	    bcc: string[];
-	    subject: string;
-	    body: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new MailtoData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.to = source["to"];
-	        this.cc = source["cc"];
-	        this.bcc = source["bcc"];
-	        this.subject = source["subject"];
-	        this.body = source["body"];
-	    }
-	}
 	export class OAuthBuildStatus {
 	    google: boolean;
 	    microsoft: boolean;

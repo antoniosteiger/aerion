@@ -7,6 +7,7 @@ import (
 	"github.com/hkdb/aerion/internal/account"
 	"github.com/hkdb/aerion/internal/certificate"
 	"github.com/hkdb/aerion/internal/logging"
+	"github.com/hkdb/aerion/internal/platform"
 	"github.com/hkdb/aerion/internal/settings"
 	"github.com/hkdb/aerion/internal/smtp"
 )
@@ -263,33 +264,33 @@ func (a *App) GetSpellcheckEnabled() (bool, error) {
 
 // SetSpellcheckEnabled sets the composer spellcheck master toggle
 func (a *App) SetSpellcheckEnabled(enabled bool) error {
-	return a.settingsStore.SetSpellcheckEnabled(enabled)
+	if err := a.settingsStore.SetSpellcheckEnabled(enabled); err != nil {
+		return err
+	}
+	a.applySpellcheck()
+	return nil
 }
 
-// GetSpellcheckLanguages returns the enabled dictionary codes (empty = frontend
-// falls back to the UI language + English)
+// GetSpellcheckLanguages returns the enabled dictionary codes (empty = falls
+// back to the UI language + English)
 func (a *App) GetSpellcheckLanguages() ([]string, error) {
 	return a.settingsStore.GetSpellcheckLanguages()
 }
 
 // SetSpellcheckLanguages sets the enabled dictionary codes
 func (a *App) SetSpellcheckLanguages(langs []string) error {
-	return a.settingsStore.SetSpellcheckLanguages(langs)
+	if err := a.settingsStore.SetSpellcheckLanguages(langs); err != nil {
+		return err
+	}
+	a.applySpellcheck()
+	return nil
 }
 
-// GetSpellcheckCustomWords returns the user-added dictionary words
-func (a *App) GetSpellcheckCustomWords() ([]string, error) {
-	return a.settingsStore.GetSpellcheckCustomWords()
-}
-
-// AddSpellcheckCustomWord appends a word to the user dictionary
-func (a *App) AddSpellcheckCustomWord(word string) error {
-	return a.settingsStore.AddSpellcheckCustomWord(word)
-}
-
-// RemoveSpellcheckCustomWord removes a word from the user dictionary
-func (a *App) RemoveSpellcheckCustomWord(word string) error {
-	return a.settingsStore.RemoveSpellcheckCustomWord(word)
+// applySpellcheck pushes the spellcheck settings to WebKit's system
+// spellchecker for the main window. Detached composer windows apply them when
+// they open.
+func (a *App) applySpellcheck() {
+	platform.SetSpellcheck(a.settingsStore.Spellcheck())
 }
 
 // GetLanguage returns the saved language preference (locale code)
@@ -301,7 +302,12 @@ func (a *App) GetLanguage() (string, error) {
 // SetLanguage sets the language preference
 // Valid values: "en", "zh-TW", "zh-HK", "zh-CN"
 func (a *App) SetLanguage(language string) error {
-	return a.settingsStore.SetLanguage(language)
+	if err := a.settingsStore.SetLanguage(language); err != nil {
+		return err
+	}
+	// An empty spellcheck selection follows the UI language
+	a.applySpellcheck()
+	return nil
 }
 
 // GetComposerMode returns the default compose mode ("inline" or "detached")

@@ -4,6 +4,8 @@
  * Tracks which pane is focused and manages focus state for keyboard navigation.
  */
 
+import { isResponsive } from './layout.svelte'
+
 export type FocusablePane = 'sidebar' | 'messageList' | 'viewer'
 
 // Pane cycle order for navigation
@@ -40,6 +42,21 @@ export function isPaneFlashing(pane: FocusablePane): boolean {
  */
 export function getFlashingPane(): FocusablePane | null {
   return flashingPane
+}
+
+// Permanent frame on the focused pane. Suppressed while only one pane is
+// visible (focus mode, responsive layouts), where it carries no information.
+let paneFrameSuppressed = $state(false)
+
+export function setPaneFrameSuppressed(suppressed: boolean) {
+  paneFrameSuppressed = suppressed
+}
+
+/**
+ * Check if a pane should draw the persistent focus frame
+ */
+export function isPaneFramed(pane: FocusablePane): boolean {
+  return focusedPane === pane && !paneFrameSuppressed && !isResponsive()
 }
 
 /**

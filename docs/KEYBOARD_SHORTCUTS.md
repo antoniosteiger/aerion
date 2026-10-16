@@ -107,6 +107,7 @@ These work when not in an input field. They apply to checked messages (bulk) or 
 
 | Shortcut | Action |
 |----------|--------|
+| `C` | Compose new message |
 | `S` | Toggle star |
 | `Backspace` / `Delete` | Move to trash |
 | `Shift+Backspace` / `Shift+Delete` | Permanently delete |

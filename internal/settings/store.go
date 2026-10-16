@@ -44,7 +44,6 @@ const (
 	KeyOAuthWarningDisabled       = "oauth_warning_disabled"  // user toggled "Don't show again" on the missing-OAuth-creds launch warning
 	KeySpellcheckEnabled          = "spellcheck_enabled"      // composer spellcheck master toggle (defaults on)
 	KeySpellcheckLanguages        = "spellcheck_languages"    // JSON array of enabled dictionary codes, e.g. ["en","de"]
-	KeySpellcheckCustomWords      = "spellcheck_custom_words" // JSON array of user-added dictionary words
 )
 
 // Extension enable/disable keys. Format: extension_<name>_enabled.
@@ -106,6 +105,8 @@ const (
 	ThemeModeGithubLight         = "github-light"         // GitHub Light
 	ThemeModeGithubDark          = "github-dark"          // GitHub Dark
 	ThemeModeGithubSoftDark      = "github-soft-dark"     // GitHub Soft Dark
+	ThemeModeGruvboxLight        = "gruvbox-light"        // Gruvbox Light
+	ThemeModeGruvboxDark         = "gruvbox-dark"         // Gruvbox Dark
 	ThemeModeTokyoNight          = "tokyo-night"          // Tokyo Night
 	ThemeModeNordLight           = "nord-light"           // Nord Light
 	ThemeModeNordDark            = "nord-dark"            // Nord Dark
@@ -118,7 +119,7 @@ const (
 )
 
 // DefaultThemeMode is the default theme mode
-const DefaultThemeMode = ThemeModeSystem
+const DefaultThemeMode = ThemeModeGruvboxDark
 
 // Composer mode values
 const (
@@ -127,7 +128,7 @@ const (
 )
 
 // DefaultComposerMode is the default compose mode
-const DefaultComposerMode = ComposerModeInline
+const DefaultComposerMode = ComposerModeDetached
 
 // Composer format values
 const (
@@ -527,11 +528,12 @@ func (s *Store) SetThemeMode(mode string) error {
 		ThemeModeDark, ThemeModeDarkGray, ThemeModeDarkBalanced, ThemeModeAdwaitaDark, ThemeModeBreezeDark,
 		ThemeModeCatppuccinLatte, ThemeModeCatppuccinFrappe, ThemeModeCatppuccinMacchiato, ThemeModeCatppuccinMocha,
 		ThemeModeDracula, ThemeModeGithubLight, ThemeModeGithubDark, ThemeModeGithubSoftDark, ThemeModeTokyoNight,
+		ThemeModeGruvboxLight, ThemeModeGruvboxDark,
 		ThemeModeNordLight, ThemeModeNordDark, ThemeModePopLight, ThemeModePopDark,
 		ThemeModeVSCodeLight, ThemeModeVSCodeDark, ThemeModeYaruLight, ThemeModeYaruDark:
 		return s.Set(KeyThemeMode, mode)
 	default:
-		return fmt.Errorf("invalid theme mode: %s (must be 'system', 'light', 'light-blue', 'light-orange', 'light-balanced', 'adwaita-light', 'breeze-light', 'dark', 'dark-gray', 'dark-balanced', 'adwaita-dark', 'breeze-dark', 'catppuccin-latte', 'catppuccin-frappe', 'catppuccin-macchiato', 'catppuccin-mocha', 'dracula', 'github-light', 'github-dark', 'github-soft-dark', 'tokyo-night', 'nord-light', 'nord-dark', 'pop-light', 'pop-dark', 'vs-code-light', 'vs-code-dark', 'yaru-light', or 'yaru-dark')", mode)
+		return fmt.Errorf("invalid theme mode: %s (must be 'system', 'light', 'light-blue', 'light-orange', 'light-balanced', 'adwaita-light', 'breeze-light', 'dark', 'dark-gray', 'dark-balanced', 'adwaita-dark', 'breeze-dark', 'catppuccin-latte', 'catppuccin-frappe', 'catppuccin-macchiato', 'catppuccin-mocha', 'dracula', 'github-light', 'github-dark', 'github-soft-dark', 'gruvbox-light', 'gruvbox-dark', 'tokyo-night', 'nord-light', 'nord-dark', 'pop-light', 'pop-dark', 'vs-code-light', 'vs-code-dark', 'yaru-light', or 'yaru-dark')", mode)
 	}
 }
 
@@ -539,10 +541,10 @@ func (s *Store) SetThemeMode(mode string) error {
 func (s *Store) GetShowTitleBar() (bool, error) {
 	value, err := s.Get(KeyShowTitleBar)
 	if err != nil {
-		return true, err // Default to true (shown)
+		return false, err // Default to false (hidden)
 	}
 	if value == "" {
-		return true, nil // Default to true (shown)
+		return false, nil // Default to false (hidden)
 	}
 	return value == "true", nil
 }
@@ -708,59 +710,6 @@ func (s *Store) SetSpellcheckLanguages(langs []string) error {
 		return err
 	}
 	return s.Set(KeySpellcheckLanguages, string(data))
-}
-
-// GetSpellcheckCustomWords returns the user-added dictionary words
-func (s *Store) GetSpellcheckCustomWords() ([]string, error) {
-	value, err := s.Get(KeySpellcheckCustomWords)
-	if err != nil {
-		return nil, err
-	}
-	if value == "" {
-		return []string{}, nil
-	}
-	var words []string
-	if err := json.Unmarshal([]byte(value), &words); err != nil {
-		return []string{}, nil
-	}
-	return words, nil
-}
-
-// AddSpellcheckCustomWord appends a word to the user dictionary (no-op if already present)
-func (s *Store) AddSpellcheckCustomWord(word string) error {
-	words, err := s.GetSpellcheckCustomWords()
-	if err != nil {
-		return err
-	}
-	for _, w := range words {
-		if w == word {
-			return nil
-		}
-	}
-	data, err := json.Marshal(append(words, word))
-	if err != nil {
-		return err
-	}
-	return s.Set(KeySpellcheckCustomWords, string(data))
-}
-
-// RemoveSpellcheckCustomWord removes a word from the user dictionary (no-op if absent)
-func (s *Store) RemoveSpellcheckCustomWord(word string) error {
-	words, err := s.GetSpellcheckCustomWords()
-	if err != nil {
-		return err
-	}
-	kept := make([]string, 0, len(words))
-	for _, w := range words {
-		if w != word {
-			kept = append(kept, w)
-		}
-	}
-	data, err := json.Marshal(kept)
-	if err != nil {
-		return err
-	}
-	return s.Set(KeySpellcheckCustomWords, string(data))
 }
 
 // GetLanguage returns the saved language preference (locale code)

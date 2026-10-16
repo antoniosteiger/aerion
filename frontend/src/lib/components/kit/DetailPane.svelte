@@ -7,7 +7,7 @@
   import { type Snippet } from 'svelte'
   import Icon from '@iconify/svelte'
   import { _ } from 'svelte-i18n'
-  import { isPaneFlashing, type FocusablePane } from '$lib/stores/keyboard.svelte'
+  import { isPaneFlashing, isPaneFramed, type FocusablePane } from '$lib/stores/keyboard.svelte'
   // Self-managed responsive (mobile + tablet) behavior — read the layout
   // store directly so consumers (extension panes) never forward responsive
   // props. At medium (≤1024px) and narrow (≤767px) the detail pane renders
@@ -44,11 +44,12 @@
   }: Props = $props()
 
   const flashing = $derived(isPaneFlashing(focusSlot))
+  const framed = $derived(isPaneFramed(focusSlot))
   const overlay = $derived(isResponsive())
   const visible = $derived(getResponsiveView() === 'viewer')
 </script>
 
-<section class="flex-1 min-w-0 flex flex-col bg-background {flashing ? 'pane-focus-flash' : ''} {overlay ? 'responsive-viewer-overlay' : ''} {overlay && visible ? 'responsive-viewer-visible' : ''}">
+<section class="flex-1 min-w-0 flex flex-col bg-background {flashing ? 'pane-focus-flash' : ''} {framed ? 'pane-focused' : ''} {overlay ? 'responsive-viewer-overlay' : ''} {overlay && visible ? 'responsive-viewer-visible' : ''}">
   <!--
     Header rendering rules — matched 1-for-1 with mail's ConversationViewer
     pattern at App.svelte:1488 (showBackButton={isResponsive()}):

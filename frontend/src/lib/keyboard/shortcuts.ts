@@ -97,6 +97,10 @@ export const LIST_MOVE_TO = (e: KeyboardEvent): boolean =>
 export const LIST_COPY_TO = (e: KeyboardEvent): boolean =>
   altOnly(e) && e.key === 'c'
 
+// New message composer — c (mail parity with Ctrl+N)
+export const COMPOSE = (e: KeyboardEvent): boolean =>
+  e.key === 'c' && noMods(e)
+
 // Convenience: namespace export for predicates that the kit imports as a group.
 export const KEY = {
   LIST_NEXT,
@@ -118,6 +122,7 @@ export const KEY = {
   SIDEBAR_LAST,
   LIST_MOVE_TO,
   LIST_COPY_TO,
+  COMPOSE,
 }
 
 // matchesAny is a small helper for cases where several predicates should be
