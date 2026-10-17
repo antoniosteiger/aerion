@@ -281,7 +281,7 @@ func (m *Manager) HasActiveSession() bool {
 
 // exchangeCode exchanges an authorization code for tokens
 func (m *Manager) exchangeCode(provider ProviderConfig, code, codeVerifier string, port int) (*TokenResponse, error) {
-	redirectURI := fmt.Sprintf("http://localhost:%d/callback", port)
+	redirectURI := loopbackRedirectURI(port)
 
 	data := url.Values{
 		"grant_type":    {"authorization_code"},
@@ -394,9 +394,17 @@ func (m *Manager) getUserEmail(provider ProviderConfig, tokens *TokenResponse) (
 	return "", fmt.Errorf("no email found in userinfo response")
 }
 
+// loopbackRedirectURI returns the redirect URI served by the callback server.
+// It has no path so it matches a bare "http://localhost" registration:
+// Microsoft ignores the port of localhost redirect URIs but requires the path
+// to match exactly. Google accepts any loopback port and path.
+func loopbackRedirectURI(port int) string {
+	return fmt.Sprintf("http://localhost:%d", port)
+}
+
 // buildAuthURL constructs the authorization URL with all required parameters
 func buildAuthURL(provider ProviderConfig, state, codeChallenge string, port int) string {
-	redirectURI := fmt.Sprintf("http://localhost:%d/callback", port)
+	redirectURI := loopbackRedirectURI(port)
 
 	params := url.Values{
 		"client_id":             {provider.ClientID},

@@ -35,6 +35,10 @@ MODULE := github.com/hkdb/aerion
 #                               microsoft-calendar (Microsoft Graph
 #                               doesn't gate scopes behind verification).
 #                               Surfaced as "Aerion - Microsoft".
+#   MICROSOFT_TENANT          — tenant in the Microsoft login URLs:
+#                               empty/"common" (default), "consumers"
+#                               (personal-only app registration),
+#                               "organizations" or a tenant ID.
 #   GOOGLE_TESTING_CLIENT_ID/SECRET — shared un-Google-verified test
 #                               project for extensions that need broader
 #                               scopes than the mail project carries
@@ -45,6 +49,7 @@ MODULE := github.com/hkdb/aerion
 LDFLAGS := -X '$(MODULE)/internal/oauth2.GoogleClientID=$(GOOGLE_CLIENT_ID)' \
            -X '$(MODULE)/internal/oauth2.GoogleClientSecret=$(GOOGLE_CLIENT_SECRET)' \
            -X '$(MODULE)/internal/oauth2.MicrosoftClientID=$(MICROSOFT_CLIENT_ID)' \
+           -X '$(MODULE)/internal/oauth2.MicrosoftTenant=$(MICROSOFT_TENANT)' \
            -X '$(MODULE)/internal/oauth2.GoogleTestingClientID=$(GOOGLE_TESTING_CLIENT_ID)' \
            -X '$(MODULE)/internal/oauth2.GoogleTestingClientSecret=$(GOOGLE_TESTING_CLIENT_SECRET)'
 
@@ -300,5 +305,6 @@ help:
 	@echo "  GOOGLE_CLIENT_ID     - Google OAuth Client ID"
 	@echo "  GOOGLE_CLIENT_SECRET - Google OAuth Client Secret (optional)"
 	@echo "  MICROSOFT_CLIENT_ID  - Microsoft OAuth Client ID"
+	@echo "  MICROSOFT_TENANT     - Microsoft login tenant (default: common)"
 	@echo ""
 	@echo "See .env.example for details on obtaining OAuth credentials."

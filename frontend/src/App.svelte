@@ -963,11 +963,11 @@
         }
       }
 
-      // Ctrl+S (no shift) — focus the active pane's search input.
+      // Ctrl+F / Ctrl+S (no shift) — focus the active pane's search input.
       // Mail dispatches to messageListRef; extensions dispatch via the
       // pane-nav registry. Ctrl+Shift+S (sync folder) is mail-only and
       // stays in the mail-domain switch below.
-      if (e.key.toLowerCase() === 's' && !e.shiftKey) {
+      if (['f', 's'].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
         if (isMailActive()) {
           messageListRef?.toggleSearchFocus()
@@ -1008,17 +1008,6 @@
           const msgId = getLastMessageId()
           if (!msgId) return
           handleReply(e.shiftKey ? 'reply-all' : 'reply', msgId, viewerRef?.isImagesLoaded(msgId) || false)
-          return
-        }
-        case 'f': {
-          if (!hasConversation) return
-          e.preventDefault()
-          if (focusedPane === 'viewer' && viewerRef?.hasFocusedMessage()) {
-            viewerRef.forward()
-            return
-          }
-          const msgId = getLastMessageId()
-          if (msgId) handleReply('forward', msgId, viewerRef?.isImagesLoaded(msgId) || false)
           return
         }
         case 's':

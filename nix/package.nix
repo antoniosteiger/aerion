@@ -18,6 +18,7 @@
   googleClientId ? "",
   googleClientSecret ? "",
   microsoftClientId ? "",
+  microsoftTenant ? "",
   googleTestingClientId ? "",
   googleTestingClientSecret ? "",
 }:
@@ -90,6 +91,7 @@ buildGoModule (finalAttrs: {
       "-X '${m}.GoogleClientID=${googleClientId}'"
       "-X '${m}.GoogleClientSecret=${googleClientSecret}'"
       "-X '${m}.MicrosoftClientID=${microsoftClientId}'"
+      "-X '${m}.MicrosoftTenant=${microsoftTenant}'"
       "-X '${m}.GoogleTestingClientID=${googleTestingClientId}'"
       "-X '${m}.GoogleTestingClientSecret=${googleTestingClientSecret}'"
     ];
