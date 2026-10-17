@@ -12,7 +12,7 @@ These shortcuts work anywhere in the application (unless in composer).
 |----------|--------|
 | `Ctrl+Q` | Quit application |
 | `Ctrl+N` | Compose new message |
-| `Ctrl+S` | Focus search bar |
+| `Ctrl+F` / `Ctrl+S` | Focus search bar |
 | `Ctrl+Shift+A` | Sync all accounts |
 | `Ctrl+Shift+S` | Sync selected folder |
 | `Ctrl+Tab` | Switch to next extension on the rail (Mail / Contacts / ...) |
@@ -42,7 +42,6 @@ These shortcuts work anywhere in the application (unless in composer).
 |----------|--------|
 | `Ctrl+R` | Reply to last message (requires viewed conversation) |
 | `Ctrl+Shift+R` | Reply All to last message (requires viewed conversation) |
-| `Ctrl+F` | Forward last message (requires viewed conversation) |
 | `Ctrl+U` | Mark as read (keyboard-focused or checked messages) |
 | `Ctrl+Shift+U` | Mark as unread (keyboard-focused or checked messages) |
 | `Ctrl+K` | Archive (keyboard-focused or checked messages) |
@@ -154,6 +153,7 @@ NAVIGATION
   Alt + Enter         Expand/collapse account
   Ctrl + Tab          Switch to next extension on rail
   Ctrl + `            Switch to previous extension on rail
+  Ctrl + F            Focus search
   Arrow Keys / HJKL   Navigate within focused pane
   Enter               Open conversation / Expand account
   Space               Toggle checkbox / Expand account
@@ -162,7 +162,6 @@ COMPOSE & REPLY
   Ctrl + N            New message
   Ctrl + R            Reply
   Ctrl + Shift + R    Reply All
-  Ctrl + F            Forward
   Ctrl + Enter        Send (in composer)
   Ctrl + D            Detach composer
   Alt  + T            Toggle format toolbar mode
@@ -234,7 +233,7 @@ First `Escape` clears checkboxes, second `Escape` closes the conversation viewer
 ### Composer Blocking
 
 When the composer is open:
-- `Ctrl+R`, `Ctrl+Shift+R`, `Ctrl+F` are blocked to prevent accidental replies
+- `Ctrl+R`, `Ctrl+Shift+R`, `Ctrl+F` are blocked to prevent accidental replies and search
 - Other global shortcuts continue to work
 
 ### Extension Rail Navigation

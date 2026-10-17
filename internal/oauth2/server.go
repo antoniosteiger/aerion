@@ -179,8 +179,14 @@ func (s *CallbackServer) handleCallback(w http.ResponseWriter, r *http.Request) 
 	fmt.Fprint(w, successPageHTML)
 }
 
-// handleRoot handles requests to the root path (redirect to callback info)
+// handleRoot handles requests to the root path. The provider redirects here
+// (see loopbackRedirectURI); requests without OAuth parameters get the
+// waiting page.
 func (s *CallbackServer) handleRoot(w http.ResponseWriter, r *http.Request) {
+	if q := r.URL.Query(); r.URL.Path == "/" && (q.Has("code") || q.Has("error")) {
+		s.handleCallback(w, r)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprint(w, waitingPageHTML)
 }

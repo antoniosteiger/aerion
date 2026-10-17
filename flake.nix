@@ -21,6 +21,8 @@
         src = self;
         # Own Azure app registration (public client, not a secret) for Outlook.com OAuth.
         microsoftClientId = "1f78976f-fb3e-442d-80df-762952279fca";
+        # The app registration is personal-accounts-only, which rejects /common/.
+        microsoftTenant = "consumers";
       };
     in
     {
@@ -46,6 +48,7 @@
           ];
           # Picked up by the Makefile (make dev / make build) like a .env entry.
           MICROSOFT_CLIENT_ID = packageArgs.microsoftClientId;
+          MICROSOFT_TENANT = packageArgs.microsoftTenant;
           # WebKitGTK's DMA-BUF renderer misbehaves on some GPU/driver combos
           # when run from a dev shell; uncomment if `wails dev` shows a blank window.
           # WEBKIT_DISABLE_DMABUF_RENDERER = "1";

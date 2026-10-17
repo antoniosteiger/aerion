@@ -32,6 +32,13 @@ var (
 	// verification, so one app registration covers all three surfaces.
 	MicrosoftClientID string
 
+	// MicrosoftTenant is the Microsoft identity platform tenant segment used
+	// in the authorize/token URLs. Empty means "common" (personal and
+	// work/school accounts). Set to "consumers" for an app registration
+	// whose audience is personal Microsoft accounts only, or to
+	// "organizations" / a tenant ID for work/school-only registrations.
+	MicrosoftTenant string
+
 	// GoogleTestingClientID is the shared OAuth2 client for first-party
 	// extensions that need broader Google scopes than the mail project is
 	// verified for (e.g., contacts.readwrite, full Calendar). Single un-

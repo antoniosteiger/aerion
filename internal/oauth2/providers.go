@@ -40,14 +40,24 @@ func GoogleProvider() ProviderConfig {
 	}
 }
 
+// microsoftEndpoint returns the Microsoft identity platform v2.0 endpoint
+// ("authorize" or "token") for the configured MicrosoftTenant.
+func microsoftEndpoint(endpoint string) string {
+	tenant := MicrosoftTenant
+	if tenant == "" {
+		tenant = "common"
+	}
+	return fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/%s", tenant, endpoint)
+}
+
 // MicrosoftProvider returns the OAuth2 configuration for Microsoft/Outlook
 func MicrosoftProvider() ProviderConfig {
 	return ProviderConfig{
 		Name:        "microsoft",
 		DisplayName: "Microsoft",
-		// Use "common" tenant for both personal and work/school accounts
-		AuthURL:  "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
-		TokenURL: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+		// Tenant from MicrosoftTenant ("common" = personal and work/school)
+		AuthURL:  microsoftEndpoint("authorize"),
+		TokenURL: microsoftEndpoint("token"),
 		Scopes: []string{
 			"https://outlook.office.com/IMAP.AccessAsUser.All", // IMAP access
 			"https://outlook.office.com/SMTP.Send",             // SMTP send
@@ -106,8 +116,8 @@ func MicrosoftCalendarProvider() ProviderConfig {
 	return ProviderConfig{
 		Name:        "microsoft-calendar",
 		DisplayName: "Outlook Calendar",
-		AuthURL:     "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
-		TokenURL:    "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+		AuthURL:     microsoftEndpoint("authorize"),
+		TokenURL:    microsoftEndpoint("token"),
 		Scopes: []string{
 			"https://graph.microsoft.com/Calendars.ReadWrite", // Calendar CRUD via Graph
 			"offline_access", // Refresh tokens
@@ -124,8 +134,8 @@ func MicrosoftContactsOnlyProvider() ProviderConfig {
 	return ProviderConfig{
 		Name:        "microsoft-contacts",
 		DisplayName: "Microsoft Contacts",
-		AuthURL:     "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
-		TokenURL:    "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+		AuthURL:     microsoftEndpoint("authorize"),
+		TokenURL:    microsoftEndpoint("token"),
 		Scopes: []string{
 			"https://graph.microsoft.com/Contacts.Read", // Contacts read access
 			"offline_access", // Refresh tokens

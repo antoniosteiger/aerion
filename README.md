@@ -84,6 +84,44 @@ Although Linux is a first-class citizen here, it also works on:
 
 - [Official Installation Guide](https://aerion.3df.io/docs/getting-started/installation/)
 
+#### Fork: building and testing with Nix
+
+Quick iteration in the dev shell (hot reload, `MICROSOFT_CLIENT_ID` is set by the shell):
+
+```sh
+nix develop
+make dev        # wails dev
+make test       # unit tests
+```
+
+Standalone release build:
+
+```sh
+nix build
+./result/bin/aerion
+```
+
+Testing a local checkout in the system: `~/dotfiles` pulls this fork in as the
+`aerion` flake input (`github:antoniosteiger/aerion`). Override that input with
+this working tree and *test*-activate, which switches the running system but
+leaves the boot default alone, so a reboot (or `nh os rollback`) undoes it:
+
+```sh
+nh os test -H lenovo_t14s_gen2 --override-input aerion ~/code/aerion    # laptop
+nh os test -H arcticbox --override-input aerion ~/code/aerion           # desktop
+
+# without nh
+sudo nixos-rebuild test --flake ~/dotfiles#lenovo_t14s_gen2 --override-input aerion ~/code/aerion
+```
+
+`-H` is required because the local hostname doesn't match the
+`nixosConfigurations` name. The override uses the git tree, so uncommitted
+changes to tracked files are included, but new files must be `git add`ed first.
+Quit the running Aerion before starting the new one (single instance).
+
+Once it works, push this repo, then in `~/dotfiles` run
+`nix flake update aerion` and `nh os switch -H <host>` to make it permanent.
+
 
 ### 📖 Documentation
 ---
