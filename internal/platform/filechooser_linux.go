@@ -11,24 +11,41 @@ import (
 	"github.com/hkdb/aerion/internal/logging"
 )
 
-// PortalSaveFile shows the XDG FileChooser portal Save dialog for a single file.
-// Returns the chosen path, or ("", nil) if the user cancelled.
-func PortalSaveFile(title, suggestedName, directory string) (string, error) {
-	log := logging.WithComponent("filechooser")
+// PortalFilter is a named set of glob patterns for the Open dialog.
+type PortalFilter struct {
+	Name     string
+	Patterns []string
+}
 
+// Wire types for the portal's filters option: a(sa(us)).
+type portalGlob struct {
+	Kind    uint32 // 0 = glob pattern
+	Pattern string
+}
+
+type portalFilterWire struct {
+	Name  string
+	Globs []portalGlob
+}
+
+// portalFileChooser calls an org.freedesktop.portal.FileChooser method and
+// waits for the Response signal. Returns the chosen paths, or (nil, nil) if
+// the user cancelled.
+func portalFileChooser(method, title string, options map[string]dbus.Variant) ([]string, error) {
 	conn, err := dbus.SessionBus()
 	if err != nil {
-		return "", fmt.Errorf("failed to connect to session bus: %w", err)
+		return nil, fmt.Errorf("failed to connect to session bus: %w", err)
 	}
 	// Don't close conn — it's the shared session bus used by GTK/WebKit
 
 	// Check if the portal service is actually running
 	var hasOwner bool
 	if err := conn.BusObject().Call("org.freedesktop.DBus.NameHasOwner", 0, "org.freedesktop.portal.Desktop").Store(&hasOwner); err != nil || !hasOwner {
-		return "", fmt.Errorf("portal service not available")
+		return nil, fmt.Errorf("portal service not available")
 	}
 
 	handleToken := fmt.Sprintf("aerion_%d", time.Now().UnixNano())
+	options["handle_token"] = dbus.MakeVariant(handleToken)
 
 	// Compute expected request path from our unique bus name and handle token
 	sender := conn.Names()[0]
@@ -43,111 +60,6 @@ func PortalSaveFile(title, suggestedName, directory string) (string, error) {
 		requestPath,
 	)
 	if err := conn.BusObject().Call("org.freedesktop.DBus.AddMatch", 0, matchRule).Err; err != nil {
-		return "", fmt.Errorf("failed to subscribe to portal response: %w", err)
-	}
-	defer conn.BusObject().Call("org.freedesktop.DBus.RemoveMatch", 0, matchRule)
-
-	signals := make(chan *dbus.Signal, 1)
-	conn.Signal(signals)
-	defer conn.RemoveSignal(signals)
-
-	// Build options
-	options := map[string]dbus.Variant{
-		"handle_token": dbus.MakeVariant(handleToken),
-		"current_name": dbus.MakeVariant(suggestedName),
-	}
-	if directory != "" {
-		// current_folder is type "ay" (byte array), null-terminated
-		options["current_folder"] = dbus.MakeVariant(append([]byte(directory), 0))
-	}
-
-	obj := conn.Object("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop")
-	call := obj.Call("org.freedesktop.portal.FileChooser.SaveFile", 0, "", title, options)
-	if call.Err != nil {
-		return "", fmt.Errorf("SaveFile portal call failed: %w", call.Err)
-	}
-
-	// Wait for the Response signal
-	timeout := time.After(60 * time.Second)
-	for {
-		select {
-		case signal := <-signals:
-			if signal == nil {
-				continue
-			}
-			if signal.Path != requestPath || signal.Name != "org.freedesktop.portal.Request.Response" {
-				continue
-			}
-			if len(signal.Body) < 2 {
-				return "", fmt.Errorf("incomplete response from FileChooser portal")
-			}
-			response, ok := signal.Body[0].(uint32)
-			if !ok {
-				return "", fmt.Errorf("unexpected response type from FileChooser portal")
-			}
-			// 1 = user cancelled
-			if response == 1 {
-				log.Debug().Msg("User cancelled save file dialog")
-				return "", nil
-			}
-			if response != 0 {
-				return "", fmt.Errorf("save file dialog failed (response: %d)", response)
-			}
-
-			results, ok := signal.Body[1].(map[string]dbus.Variant)
-			if !ok {
-				return "", fmt.Errorf("unexpected results type from FileChooser portal")
-			}
-
-			uris, ok := results["uris"].Value().([]string)
-			if !ok || len(uris) == 0 {
-				return "", fmt.Errorf("no URIs in FileChooser portal response")
-			}
-
-			path, err := uriToPath(uris[0])
-			if err != nil {
-				return "", err
-			}
-
-			log.Debug().Str("path", path).Msg("Portal save file path selected")
-			return path, nil
-
-		case <-timeout:
-			return "", fmt.Errorf("FileChooser portal request timed out")
-		}
-	}
-}
-
-// PortalSaveFiles shows the XDG FileChooser portal SaveFiles dialog for multiple files.
-// Returns the list of chosen paths, or (nil, nil) if the user cancelled.
-func PortalSaveFiles(title string, filenames []string, directory string) ([]string, error) {
-	log := logging.WithComponent("filechooser")
-
-	conn, err := dbus.SessionBus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to session bus: %w", err)
-	}
-	// Don't close conn — it's the shared session bus used by GTK/WebKit
-
-	// Check if the portal service is actually running
-	var hasOwner bool
-	if err := conn.BusObject().Call("org.freedesktop.DBus.NameHasOwner", 0, "org.freedesktop.portal.Desktop").Store(&hasOwner); err != nil || !hasOwner {
-		return nil, fmt.Errorf("portal service not available")
-	}
-
-	handleToken := fmt.Sprintf("aerion_%d", time.Now().UnixNano())
-
-	sender := conn.Names()[0]
-	senderPath := strings.ReplaceAll(sender[1:], ".", "_")
-	requestPath := dbus.ObjectPath(fmt.Sprintf(
-		"/org/freedesktop/portal/desktop/request/%s/%s", senderPath, handleToken,
-	))
-
-	matchRule := fmt.Sprintf(
-		"type='signal',interface='org.freedesktop.portal.Request',member='Response',path='%s'",
-		requestPath,
-	)
-	if err := conn.BusObject().Call("org.freedesktop.DBus.AddMatch", 0, matchRule).Err; err != nil {
 		return nil, fmt.Errorf("failed to subscribe to portal response: %w", err)
 	}
 	defer conn.BusObject().Call("org.freedesktop.DBus.RemoveMatch", 0, matchRule)
@@ -156,34 +68,17 @@ func PortalSaveFiles(title string, filenames []string, directory string) ([]stri
 	conn.Signal(signals)
 	defer conn.RemoveSignal(signals)
 
-	// Build files as aay (array of null-terminated byte arrays)
-	files := make([][]byte, len(filenames))
-	for i, name := range filenames {
-		files[i] = append([]byte(name), 0)
-	}
-
-	options := map[string]dbus.Variant{
-		"handle_token": dbus.MakeVariant(handleToken),
-		"files":        dbus.MakeVariant(files),
-	}
-	if directory != "" {
-		options["current_folder"] = dbus.MakeVariant(append([]byte(directory), 0))
-	}
-
 	obj := conn.Object("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop")
-	call := obj.Call("org.freedesktop.portal.FileChooser.SaveFiles", 0, "", title, options)
-	if call.Err != nil {
-		return nil, fmt.Errorf("SaveFiles portal call failed: %w", call.Err)
+	if call := obj.Call("org.freedesktop.portal.FileChooser."+method, 0, "", title, options); call.Err != nil {
+		return nil, fmt.Errorf("%s portal call failed: %w", method, call.Err)
 	}
 
-	timeout := time.After(60 * time.Second)
+	// The user may take a while in the dialog, so the timeout is generous.
+	timeout := time.After(30 * time.Minute)
 	for {
 		select {
 		case signal := <-signals:
-			if signal == nil {
-				continue
-			}
-			if signal.Path != requestPath || signal.Name != "org.freedesktop.portal.Request.Response" {
+			if signal == nil || signal.Path != requestPath || signal.Name != "org.freedesktop.portal.Request.Response" {
 				continue
 			}
 			if len(signal.Body) < 2 {
@@ -193,19 +88,18 @@ func PortalSaveFiles(title string, filenames []string, directory string) ([]stri
 			if !ok {
 				return nil, fmt.Errorf("unexpected response type from FileChooser portal")
 			}
+			// 1 = user cancelled
 			if response == 1 {
-				log.Debug().Msg("User cancelled save files dialog")
 				return nil, nil
 			}
 			if response != 0 {
-				return nil, fmt.Errorf("save files dialog failed (response: %d)", response)
+				return nil, fmt.Errorf("%s dialog failed (response: %d)", method, response)
 			}
 
 			results, ok := signal.Body[1].(map[string]dbus.Variant)
 			if !ok {
 				return nil, fmt.Errorf("unexpected results type from FileChooser portal")
 			}
-
 			uris, ok := results["uris"].Value().([]string)
 			if !ok || len(uris) == 0 {
 				return nil, fmt.Errorf("no URIs in FileChooser portal response")
@@ -219,14 +113,70 @@ func PortalSaveFiles(title string, filenames []string, directory string) ([]stri
 				}
 				paths[i] = p
 			}
-
-			log.Debug().Int("count", len(paths)).Msg("Portal save files paths selected")
 			return paths, nil
 
 		case <-timeout:
 			return nil, fmt.Errorf("FileChooser portal request timed out")
 		}
 	}
+}
+
+// currentFolder encodes a directory as the portal's null-terminated "ay" type.
+func currentFolder(directory string) dbus.Variant {
+	return dbus.MakeVariant(append([]byte(directory), 0))
+}
+
+// PortalOpenFiles shows the XDG FileChooser portal Open dialog. With
+// selectDirectory it picks folders instead of files. Returns the chosen
+// paths, or (nil, nil) if the user cancelled.
+func PortalOpenFiles(title, directory string, multiple, selectDirectory bool, filters []PortalFilter) ([]string, error) {
+	options := map[string]dbus.Variant{
+		"multiple":  dbus.MakeVariant(multiple),
+		"directory": dbus.MakeVariant(selectDirectory),
+	}
+	if directory != "" {
+		options["current_folder"] = currentFolder(directory)
+	}
+	if len(filters) > 0 {
+		wire := make([]portalFilterWire, len(filters))
+		for i, f := range filters {
+			wire[i].Name = f.Name
+			for _, pat := range f.Patterns {
+				wire[i].Globs = append(wire[i].Globs, portalGlob{Pattern: pat})
+			}
+		}
+		options["filters"] = dbus.MakeVariant(wire)
+	}
+	return portalFileChooser("OpenFile", title, options)
+}
+
+// PortalSaveFile shows the XDG FileChooser portal Save dialog for a single file.
+// Returns the chosen path, or ("", nil) if the user cancelled.
+func PortalSaveFile(title, suggestedName, directory string) (string, error) {
+	options := map[string]dbus.Variant{"current_name": dbus.MakeVariant(suggestedName)}
+	if directory != "" {
+		options["current_folder"] = currentFolder(directory)
+	}
+	paths, err := portalFileChooser("SaveFile", title, options)
+	if err != nil || len(paths) == 0 {
+		return "", err
+	}
+	return paths[0], nil
+}
+
+// PortalSaveFiles shows the XDG FileChooser portal SaveFiles dialog for multiple files.
+// Returns the list of chosen paths, or (nil, nil) if the user cancelled.
+func PortalSaveFiles(title string, filenames []string, directory string) ([]string, error) {
+	// files is aay (array of null-terminated byte arrays)
+	files := make([][]byte, len(filenames))
+	for i, name := range filenames {
+		files[i] = append([]byte(name), 0)
+	}
+	options := map[string]dbus.Variant{"files": dbus.MakeVariant(files)}
+	if directory != "" {
+		options["current_folder"] = currentFolder(directory)
+	}
+	return portalFileChooser("SaveFiles", title, options)
 }
 
 // PortalOpenDirectory opens the folder containing a file using the OpenURI portal.

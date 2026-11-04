@@ -1035,7 +1035,7 @@ func (c *ComposerApp) CheckRecipientCerts(emails []string) (map[string]bool, err
 
 // PickRecipientCertFile opens a file picker for certificate files.
 func (c *ComposerApp) PickRecipientCertFile() (string, error) {
-	path, err := wailsRuntime.OpenFileDialog(c.ctx, wailsRuntime.OpenDialogOptions{
+	path, err := openFileDialog(c.ctx, wailsRuntime.OpenDialogOptions{
 		Title: "Select Recipient Certificate",
 		Filters: []wailsRuntime.FileFilter{
 			{
@@ -1109,7 +1109,7 @@ func (c *ComposerApp) CheckRecipientPGPKeys(emails []string) (map[string]bool, e
 
 // PickRecipientPGPKeyFile opens a file picker for PGP public key files.
 func (c *ComposerApp) PickRecipientPGPKeyFile() (string, error) {
-	path, err := wailsRuntime.OpenFileDialog(c.ctx, wailsRuntime.OpenDialogOptions{
+	path, err := openFileDialog(c.ctx, wailsRuntime.OpenDialogOptions{
 		Title: "Select Recipient PGP Public Key",
 		Filters: []wailsRuntime.FileFilter{
 			{
