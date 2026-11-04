@@ -188,7 +188,7 @@ func (a *App) SaveAttachmentAs(attachmentID string) (string, error) {
 	}
 
 	// Native: use Wails dialog
-	savePath, err := wailsRuntime.SaveFileDialog(a.ctx, wailsRuntime.SaveDialogOptions{
+	savePath, err := saveFileDialog(a.ctx, wailsRuntime.SaveDialogOptions{
 		DefaultDirectory: defaultDir,
 		DefaultFilename:  att.Filename,
 		Title:            "Save Attachment",
@@ -358,7 +358,7 @@ func (a *App) SaveAllAttachments(messageID string) (string, error) {
 	}
 
 	// Native: use Wails folder dialog
-	saveDir, err := wailsRuntime.OpenDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
+	saveDir, err := openDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
 		DefaultDirectory: defaultDir,
 		Title:            "Save All Attachments",
 	})
@@ -547,7 +547,7 @@ func (a *App) SaveEncryptedAttachmentAs(messageID, filename string) (string, err
 	}
 
 	// Native: use Wails dialog
-	savePath, err := wailsRuntime.SaveFileDialog(a.ctx, wailsRuntime.SaveDialogOptions{
+	savePath, err := saveFileDialog(a.ctx, wailsRuntime.SaveDialogOptions{
 		DefaultDirectory: defaultDir,
 		DefaultFilename:  filename,
 		Title:            "Save Attachment",
@@ -617,7 +617,7 @@ func (a *App) SaveAllEncryptedAttachments(messageID string) (string, error) {
 	}
 
 	// Native: use Wails folder dialog
-	saveDir, err := wailsRuntime.OpenDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
+	saveDir, err := openDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
 		DefaultDirectory: defaultDir,
 		Title:            "Save All Attachments",
 	})

@@ -1707,7 +1707,8 @@
   }
 
   // Attachment handling — uses HTML file input so WebKitGTK routes through
-  // the FileChooser portal (required for Flatpak sandbox file access)
+  // the FileChooser portal (required for Flatpak sandbox file access).
+  // Outside Flatpak this needs GTK_USE_PORTAL=1 (see portal_env_linux.go).
   function handleAttachFiles() {
     // Append to DOM before clicking (required for WebKitGTK to reliably
     // open the file chooser dialog on the first click)

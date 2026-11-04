@@ -4,6 +4,17 @@ package platform
 
 import "fmt"
 
+// PortalFilter is a named set of glob patterns for the Open dialog.
+type PortalFilter struct {
+	Name     string
+	Patterns []string
+}
+
+// PortalOpenFiles is not supported on non-Linux platforms.
+func PortalOpenFiles(title, directory string, multiple, selectDirectory bool, filters []PortalFilter) ([]string, error) {
+	return nil, fmt.Errorf("portal file chooser not supported on this platform")
+}
+
 // PortalSaveFile is not supported on non-Linux platforms.
 func PortalSaveFile(title, suggestedName, directory string) (string, error) {
 	return "", fmt.Errorf("portal file chooser not supported on this platform")
