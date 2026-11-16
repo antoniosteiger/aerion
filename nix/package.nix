@@ -47,7 +47,7 @@ buildGoModule (finalAttrs: {
 
   npmDeps = fetchNpmDeps {
     src = "${finalAttrs.src}/frontend";
-    hash = "sha256-sQwplyDAbayYczwrrXMcxPIzE8IhB5vkApt7qLwAEQo=";
+    hash = "sha256-wz1v9uZ3rjJfjBnCV65alnpsLuLv6ph+TbtOuQ5Ckcc=";
   };
   npmRoot = "frontend";
 
