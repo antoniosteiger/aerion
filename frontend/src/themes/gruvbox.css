@@ -1,10 +1,11 @@
 /* Gruvbox — palette per morhetz/gruvbox (medium contrast).
    - Dark: bg0 as bg, fg1 as text, bright accents
    - Light: bg0 (light) as bg, fg1 (dark) as text, faded accents for contrast
-   Orange is the primary accent in both. Avatars use the 7 accent hues.
+   Green is the primary accent in both, matching Noctalia's Gruvbox scheme
+   (mPrimary #B8BB26). Avatars use the 7 accent hues.
    Aerion-specific override: --ring matches --primary per Aerion convention. */
 @layer base {
-  /* Gruvbox Light — faded orange as primary for contrast on the cream bg. */
+  /* Gruvbox Light — faded green as primary for contrast on the cream bg. */
   [data-theme="gruvbox-light"] {
     color-scheme: light;
     --background: 48 87% 88%;              /* bg0 #FBF1C7 */
@@ -13,7 +14,7 @@
     --card-foreground: 20 5% 22%;
     --popover: 48 87% 88%;                 /* bg0 */
     --popover-foreground: 20 5% 22%;
-    --primary: 19 97% 35%;                 /* faded orange #AF3A03 */
+    --primary: 57 79% 26%;                 /* faded green #79740E */
     --primary-foreground: 48 87% 88%;      /* bg0 */
     --secondary: 46 67% 84%;               /* bg0_s #F2E5BC */
     --secondary-foreground: 20 5% 22%;
@@ -25,7 +26,7 @@
     --destructive-foreground: 48 87% 88%;  /* bg0 */
     --border: 40 38% 73%;                  /* bg2 #D5C4A1 */
     --input: 40 38% 73%;                   /* bg2 */
-    --ring: 19 97% 35%;                    /* faded orange */
+    --ring: 57 79% 26%;                    /* faded green */
     /* Avatar palette: neutral accents (lightness 35-54%), light initials. */
     --avatar-fg: 48 87% 88%;               /* bg0 */
     --avatar-1:  2 75% 46%;                /* red #CC241D */
@@ -44,7 +45,7 @@
     --avatar-14: 323 39% 40%;              /* faded purple #8F3F71 */
   }
 
-  /* Gruvbox Dark — bright orange as primary, the classic gruvbox accent. */
+  /* Gruvbox Dark — bright green as primary. */
   [data-theme="gruvbox-dark"] {
     color-scheme: dark;
     --background: 0 0% 16%;                /* bg0 #282828 */
@@ -53,8 +54,8 @@
     --card-foreground: 43 59% 81%;
     --popover: 0 0% 16%;                   /* bg0 */
     --popover-foreground: 43 59% 81%;
-    --primary: 27 99% 55%;                 /* bright orange #FE8019 */
-    --primary-foreground: 0 0% 16%;        /* bg0 — dark text on bright orange */
+    --primary: 61 66% 44%;                 /* bright green #B8BB26 */
+    --primary-foreground: 0 0% 16%;        /* bg0 — dark text on bright green */
     --secondary: 20 5% 22%;                /* bg1 #3C3836 */
     --secondary-foreground: 43 59% 81%;
     --muted: 20 5% 22%;                    /* bg1 */
@@ -65,7 +66,7 @@
     --destructive-foreground: 0 0% 16%;    /* bg0 */
     --border: 22 7% 29%;                   /* bg2 */
     --input: 22 7% 29%;                    /* bg2 */
-    --ring: 27 99% 55%;                    /* bright orange */
+    --ring: 61 66% 44%;                    /* bright green */
     /* Avatar palette: bright + neutral accents (lightness 44-68%), dark initials. */
     --avatar-fg: 0 0% 16%;                 /* bg0 */
     --avatar-1:  6 96% 59%;                /* bright red #FB4934 */

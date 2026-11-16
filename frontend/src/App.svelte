@@ -100,6 +100,19 @@
   const viewerIsOverlay = $derived(isResponsive() || focusMode !== 'off')
   const viewerIsVisible = $derived(getResponsiveView() === 'viewer' || focusMode !== 'off')
 
+  // Fork: when the window shrinks from the full three-pane layout into a
+  // responsive one (e.g. a tiling WM halves it to make room for a detached
+  // composer), keep the open conversation on screen instead of dropping back
+  // to the list. Otherwise the mail being answered vanishes behind the list.
+  let prevLayoutMode = getLayoutMode()
+  $effect(() => {
+    const mode = getLayoutMode()
+    if (prevLayoutMode === 'full' && mode !== 'full' && selectedThreadId !== null) {
+      showViewer()
+    }
+    prevLayoutMode = mode
+  })
+
   function toggleThreadFocus() {
     if (focusMode === 'thread') {
       focusMode = 'off'
@@ -770,8 +783,11 @@
     const accountId = resolveAccountId(selectedConversationAccountId) || resolveAccountId(selectedAccountId)
     if (!accountId) return
 
-    // Force detached composer when in focus mode — preserves the focused view
-    if (focusMode !== 'off') {
+    // Detached composer when that's the preferred mode (fork: replies and
+    // forwards follow the setting like new messages do, so the mail being
+    // answered stays visible), and always in focus mode — preserves the
+    // focused view
+    if (getComposerMode() === 'detached' || focusMode !== 'off') {
       OpenComposerWindow(accountId, mode, messageId, '', '')
       return
     }
@@ -1024,7 +1040,10 @@
             sidebarRef?.toggleSync()
             return
           }
-          // Ctrl-A: Select all text in viewer, or select all messages in list
+          // Ctrl-A: Select all text in viewer, or select all messages in list.
+          // Fork: inside a text field (search box, dialogs) leave Ctrl-A to the
+          // browser so it selects the field's text.
+          if (inInput) return
           e.preventDefault()
           if (focusedPane === 'viewer') {
             viewerRef?.selectAllText()

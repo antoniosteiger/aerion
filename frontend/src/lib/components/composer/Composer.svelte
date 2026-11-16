@@ -364,6 +364,9 @@
   let showFlatpakDndDialog = $state(false)
   let showCloseConfirm = $state(false)
   let closeLoading = $state<'discard' | 'save' | null>(null)
+  // Fork: content hash once initialization is done (prefills, quote and
+  // signature in place), so closing an untouched composer skips the prompt.
+  let pristineHash: string | null = null
 
   // Get only the user-composed text, excluding quoted/forwarded content
   function getUserComposedText(): string {
@@ -890,6 +893,7 @@
         default:
           toInputRef?.focus()
       }
+      pristineHash = getContentHash()
     }, 50)
 
     // Listen for draft sync status changes from backend
@@ -1315,7 +1319,21 @@
       saveTimeoutId = null
     }
 
-    // Always show confirmation dialog (even for empty content, since a draft may have been saved)
+    // Fork: nothing typed yet → close without asking. A freshly opened
+    // reply/forward is autosaved once the signature lands, so that draft is
+    // just the untouched template: discard it. An opened existing draft that
+    // is unchanged is kept as it is.
+    if (!hasContent() || (pristineHash !== null && getContentHash() === pristineHash)) {
+      if (draftId) {
+        onCloseHandled?.()
+        onClose?.()
+      } else {
+        handleDiscardAndClose()
+      }
+      return
+    }
+
+    // Otherwise ask: discard, save as draft, or keep editing
     showCloseConfirm = true
   }
 
@@ -1550,7 +1568,14 @@
       // This also covers layers that deliberately ignore Escape: bits-ui
       // preventDefaults those too, and the composer shouldn't close under a
       // modal that is refusing to.
-      if (e.defaultPrevented) return
+      //
+      // Fork: ProseMirror itself preventDefaults every Escape pressed inside
+      // the rich text editor (prosemirror-view captureKeyDown), so this guard
+      // used to swallow Esc whenever the cursor was in the message body. A
+      // modal on top traps focus, so an Escape whose target is the editor
+      // can't belong to one: the editor's preventDefault isn't a dialog's.
+      const fromEditor = e.target instanceof Element && e.target.closest('.ProseMirror') !== null
+      if (e.defaultPrevented && !fromEditor) return
       if (isDialogGuardActive()) return
       handleClose()
     }

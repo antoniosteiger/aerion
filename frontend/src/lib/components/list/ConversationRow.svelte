@@ -165,7 +165,8 @@
     // gap (gap-2/3/4/5 per density); group-hover reveals in every layout
     // (on touch, WebKit sticky hover means a tap also reveals — accepted).
     // No opacity states — the checkbox is always fully opaque; visibility is
-    // purely the width clip (overflow-hidden). The slide IS the reveal.
+    // purely the width clip (overflow-hidden). Fork: only used when avatars
+    // are off, and without a width transition (see the checkbox markup).
     checkboxHidden: {
       micro: 'w-0 h-4 -mr-2 group-hover:w-4 group-hover:mr-0',
       compact: 'w-0 h-5 -mr-3 group-hover:w-5 group-hover:mr-0',
@@ -503,15 +504,7 @@
       </div>
     {/if}
 
-    <!-- Checkbox column. Setting OFF (default): hidden (width-clipped) until
-         row hover on desktop, revealed while checked, toggled by swipe on
-         narrow/touch. Setting ON: legacy always-reserved column with opacity
-         fade (invisible until hover on desktop, faint on narrow). -->
-    <div
-      class="flex-shrink-0 flex items-center justify-center self-center {getAlwaysShowMessageCheckbox()
-        ? `${densityClasses.checkbox[density]} transition-opacity duration-200 ${checked ? 'opacity-100' : densityClasses.checkboxAlways}`
-        : `overflow-hidden transition-all duration-200 ${checked ? densityClasses.checkbox[density] : densityClasses.checkboxHidden[density]}`}"
-    >
+    {#snippet checkboxButton()}
       <button
         class="{densityClasses.checkboxInner[density]} rounded border {checked
           ? 'bg-primary border-primary'
@@ -522,29 +515,65 @@
           <Icon icon="mdi:check" class="{densityClasses.checkIcon[density]} text-primary-foreground" />
         {/if}
       </button>
-    </div>
+    {/snippet}
+
+    <!-- Checkbox. Setting ON: legacy always-reserved column with opacity fade
+         (invisible until hover on desktop, faint on narrow). Setting OFF
+         (default) with avatars: overlaid on the avatar (below), shown on hover
+         or while checked. Setting OFF without avatars: zero-width column that
+         opens on hover or while checked.
+         Fork: the hidden column used to animate its width on hover, which
+         reflowed the whole row every frame and pushed the text right. On
+         WebKitGTK that intermittently left a stale paint of the old text next
+         to the new one (doubled, garbled summaries). Nothing animates layout
+         now: the avatar overlay only fades opacity, and the no-avatar column
+         toggles its width instantly. -->
+    {#if getAlwaysShowMessageCheckbox()}
+      <div
+        class="flex-shrink-0 flex items-center justify-center self-center {densityClasses.checkbox[density]} transition-opacity duration-200 {checked ? 'opacity-100' : densityClasses.checkboxAlways}"
+      >
+        {@render checkboxButton()}
+      </div>
+    {:else if !getShowMessageListCircles()}
+      <div
+        class="flex-shrink-0 flex items-center justify-center self-center overflow-hidden {checked ? densityClasses.checkbox[density] : densityClasses.checkboxHidden[density]}"
+      >
+        {@render checkboxButton()}
+      </div>
+    {/if}
 
     <!-- Sender avatar: colored circle, or the contact's photo when enabled
          (falling back to the colored circle when the contact has no photo) -->
     {#if getShowMessageListCircles()}
-      {#if getShowMessageListProfilePics()}
-        {@const avatarPhoto = contactPhotos.get(conversation.participants?.[0]?.email ?? '')}
-        <Avatar
-          email={conversation.participants?.[0]?.email || conversation.threadId}
-          name={conversation.participants?.[0]?.name}
-          size={AVATAR_PX[density]}
-          photoData={avatarPhoto?.data}
-          photoMediaType={avatarPhoto?.mediaType}
-        />
-      {:else}
-        <div
-          class="{densityClasses.avatar[density]} rounded-full flex-shrink-0 flex items-center justify-center font-medium {getAvatarColor(
-            conversation
-          )}"
-        >
-          {getInitials(conversation)}
-        </div>
-      {/if}
+      <div class="relative flex-shrink-0">
+        {#if getShowMessageListProfilePics()}
+          {@const avatarPhoto = contactPhotos.get(conversation.participants?.[0]?.email ?? '')}
+          <Avatar
+            email={conversation.participants?.[0]?.email || conversation.threadId}
+            name={conversation.participants?.[0]?.name}
+            size={AVATAR_PX[density]}
+            photoData={avatarPhoto?.data}
+            photoMediaType={avatarPhoto?.mediaType}
+          />
+        {:else}
+          <div
+            class="{densityClasses.avatar[density]} rounded-full flex-shrink-0 flex items-center justify-center font-medium {getAvatarColor(
+              conversation
+            )}"
+          >
+            {getInitials(conversation)}
+          </div>
+        {/if}
+        {#if !getAlwaysShowMessageCheckbox()}
+          <div
+            class="absolute inset-0 rounded-full bg-background flex items-center justify-center transition-opacity duration-150 {checked
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-100'}"
+          >
+            {@render checkboxButton()}
+          </div>
+        {/if}
+      </div>
     {/if}
 
     <!-- Content -->
