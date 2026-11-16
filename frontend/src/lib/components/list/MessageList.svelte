@@ -719,6 +719,15 @@
         searchInputRef?.blur()
         listContainerRef?.focus()
         break
+      case event.key === 'Escape':
+        // Fork: Esc closes the search bar (clearing the query) and hands focus
+        // back to the list. stopPropagation keeps the global Esc handler from
+        // also closing the open conversation.
+        event.preventDefault()
+        event.stopPropagation()
+        clearSearch()
+        listContainerRef?.focus()
+        break
     }
   }
 

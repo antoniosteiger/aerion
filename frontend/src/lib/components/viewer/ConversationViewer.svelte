@@ -1626,12 +1626,15 @@
                       />
                     </div>
                     {#if getDarkMailContent() && getIsDarkActive()}
+                      <!-- Fork: MDI icons instead of ☀️/🌛 emoji, matching the
+                           other header buttons -->
                       <button
-                        class="text-xs leading-none px-1.5 py-0.5 rounded hover:bg-muted transition-colors"
+                        class="p-1 rounded hover:bg-muted transition-colors"
                         title={shouldDarkenMessage(msg.id) ? $_('viewer.darkMailToLight') : $_('viewer.darkMailToDark')}
+                        aria-label={shouldDarkenMessage(msg.id) ? $_('viewer.darkMailToLight') : $_('viewer.darkMailToDark')}
                         onclick={(e) => { e.stopPropagation(); toggleDarkMailOverride(msg.id) }}
                       >
-                        {shouldDarkenMessage(msg.id) ? '☀️' : '🌛'}
+                        <Icon icon={shouldDarkenMessage(msg.id) ? 'mdi:weather-sunny' : 'mdi:weather-night'} class="w-4 h-4 text-muted-foreground" />
                       </button>
                     {/if}
                   </div>
@@ -1641,6 +1644,22 @@
                 {#if isExpanded}
                   <div class="px-4 pb-4 pt-0">
                     <div class="ml-13 pl-3 border-l-2 border-border">
+                      <!-- Attachments. Fork: first thing under the message header
+                           instead of after the body, so they're visible without
+                           scrolling past long bodies and quoted history. -->
+                      {#if msg.hasAttachments || (pgpResults[msg.id]?.attachments?.length ?? 0) > 0 || (smimeResults[msg.id]?.attachments?.length ?? 0) > 0}
+                        <div class="border-b border-border pb-4 mb-4">
+                          <h3 class="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                            <Icon icon="mdi:paperclip" class="w-4 h-4" />
+                            {$_('viewer.attachments')}
+                          </h3>
+                          <AttachmentList
+                            messageId={msg.id}
+                            encryptedAttachments={pgpResults[msg.id]?.attachments ?? smimeResults[msg.id]?.attachments}
+                          />
+                        </div>
+                      {/if}
+
                       <!-- Read Receipt Banner -->
                       {#if shouldShowReadReceiptBanner(msg) && readReceiptPolicy === 'ask'}
                         <div class="flex items-center justify-between gap-3 px-3 py-2 mb-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md">
@@ -1799,20 +1818,6 @@
                           />
                         {/if}
                       </div>
-
-                      <!-- Attachments -->
-                      {#if msg.hasAttachments || (pgpResults[msg.id]?.attachments?.length ?? 0) > 0 || (smimeResults[msg.id]?.attachments?.length ?? 0) > 0}
-                        <div class="border-t border-border pt-4 mt-4">
-                          <h3 class="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-                            <Icon icon="mdi:paperclip" class="w-4 h-4" />
-                            {$_('viewer.attachments')}
-                          </h3>
-                          <AttachmentList
-                            messageId={msg.id}
-                            encryptedAttachments={pgpResults[msg.id]?.attachments ?? smimeResults[msg.id]?.attachments}
-                          />
-                        </div>
-                      {/if}
 
                       <!-- View Source Button -->
                       <div class="border-t border-border pt-4 mt-4">
